@@ -7,6 +7,7 @@ import logging
 import os
 from typing import List, Optional
 
+import arc  # type: ignore
 import requests
 from astropy.time import Time  # type: ignore
 from astropy.units import Quantity  # type: ignore
