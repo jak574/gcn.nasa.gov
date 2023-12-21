@@ -1,6 +1,6 @@
 import os
 from time import tzset
-from typing import Any, Type
+from typing import Any, List, Type
 
 from fastapi import HTTPException
 from pydantic import ValidationError
@@ -17,7 +17,6 @@ class ACROSSAPIBase:
 
     # Main definitions
     mission: str = "ACROSS"
-    username: str = "anonymous"
 
     # Allowed time to cache result
     _cache_time = 300  # 300s = 5 mins
@@ -33,7 +32,7 @@ class ACROSSAPIBase:
 
     # Common things in API classes
     status: JobInfo
-    entries: list
+    entries: List[Any] = []
 
     def __getitem__(self, i) -> Any:
         return self.entries[i]
@@ -44,7 +43,6 @@ class ACROSSAPIBase:
 
         Returns
         -------
-        str
             API Name
         """
         return f"{self.mission}{self.__class__.__name__.replace(self.mission,'')}"
@@ -60,34 +58,11 @@ class ACROSSAPIBase:
         """
         return self._schema.model_validate(self)
 
-    def loads(self, model_json: str) -> bool:
-        """Load attributes from JSON of API Model
-
-        Parameters
-        ----------
-        model_json : str
-            JSON of API Model
-
-        Returns
-        -------
-        bool
-            Did this work True or False?
-        """
-        try:
-            model = self._schema.model_validate_json(model_json)
-            for k in model.model_fields.keys():
-                setattr(self, k, getattr(model, k))
-        except ValidationError as e:
-            raise HTTPException(422, e.errors())
-
-        return True
-
     def validate_get(self) -> bool:
         """Validate arguments for GET
 
         Returns
         -------
-        bool
             Do arguments validate? True | False
         """
         try:
@@ -101,7 +76,6 @@ class ACROSSAPIBase:
 
         Returns
         -------
-        bool
             Is it validated? True | False
         """
         try:
@@ -115,7 +89,6 @@ class ACROSSAPIBase:
 
         Returns
         -------
-        bool
             Is it validated? True | False
         """
         try:
@@ -130,7 +103,6 @@ class ACROSSAPIBase:
 
         Returns
         -------
-        bool
             Is it validated? True | False
         """
         try:

@@ -1,8 +1,6 @@
 from typing import Optional
 
 from ..base.common import ACROSSAPIBase
-from ..base.schema import JobInfo
-from .jobs import check_cache, register_job
 from .schema import HelloGetSchema, HelloSchema
 
 
@@ -11,7 +9,7 @@ class Hello(ACROSSAPIBase):
 
     Parameters
     ----------
-    name : str
+    name
         Your name, if you wish to give it
     """
 
@@ -27,24 +25,20 @@ class Hello(ACROSSAPIBase):
 
         Parameters
         ----------
-        name : str
+        name
             Your name
         """
         self.name = name
-        self.status: JobInfo = JobInfo()
         if self.validate_get():
             self.get()
 
-    @check_cache
-    @register_job
     def get(self) -> bool:
         """
         GET method for ACROSS API Hello class.
 
         Returns
         -------
-        bool
-            True if this worked
+            True if this worked (it always should)
         """
         if self.name is None:
             self.hello = "Hello there!"

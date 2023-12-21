@@ -11,7 +11,12 @@ from ..functions import convert_to_dt
 
 
 class BaseSchema(BaseModel):
-    """Just define from_attributes for every Schema"""
+    """
+    Base class for schemas.
+
+    This class provides a base implementation for schemas and defines the `from_attributes` method.
+    Subclasses can inherit from this class and override the `from_attributes` method to define their own schema logic.
+    """
 
     model_config = ConfigDict(from_attributes=True)
 
