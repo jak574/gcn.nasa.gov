@@ -12,7 +12,7 @@ from astropy.time import Time  # type: ignore
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from .schema import BaseSchema
+from .schema import BaseSchema, ConfigSchema, JobInfo
 
 # Make sure we are working in UTC times
 os.environ["TZ"] = "UTC"
@@ -57,11 +57,13 @@ class ACROSSAPIBase:
     _post_schema: Type[BaseSchema]
     _del_schema: Type[BaseSchema]
     _entry_schema: Type[BaseSchema]
+    config: ConfigSchema
 
     # Common things in API classes
+    status: JobInfo
     entries: List[Any] = []
 
-    def __getitem__(self, i: int) -> Any:
+    def __getitem__(self, i) -> Any:
         return self.entries[i]
 
     @property
