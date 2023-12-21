@@ -8,11 +8,11 @@ class UserModel(BaseSchema, DynamoDBBase):
 
     Attributes
     ----------
-    username: str
+    username
         The username of the user.
-    api_key: str
+    api_key
         The API key associated with the user.
-    userlevel: int
+    userlevel
         The user level. Defaults to 1.
     """
 

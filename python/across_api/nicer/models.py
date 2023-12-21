@@ -9,10 +9,14 @@ class NICERPlanEntryModel(PlanEntryModelBase, Base):
     """
     Represents a single entry in the NICER observation plan.
 
-    Attributes:
-        obsid (int): The observation ID.
-        targetid (int): The target ID.
-        mode (str): The observation mode.
+    Parameters
+    ----------
+    obsid
+        The observation ID.
+    targetid
+        The target ID.
+    mode
+        The observation mode.
     """
 
     __tablename__ = "nicer_plan"

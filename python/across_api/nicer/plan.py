@@ -17,23 +17,23 @@ class NICERPlan(PlanBase):
 
     Parameters
     ----------
-    username : str
+    username
         Username for API
-    api_key : str
+    api_key
         API Key for user
-    ra : Optional[float]
+    ra
         Right Ascension in decimal degrees
-    dec : Optional[float]
+    dec
         Declination in decimal degrees
-    begin : Optional[datetime]
+    begin
         Start time of plan search
-    end : Optional[datetime]
+    end
         End time of plan search
-    obsid : Optional[Union[int, list]]
+    obsid
         NICER Observation ID
-    targetid : Optional[Union[int, list]]
+    targetid
         NICER Target ID
-    radius : Optional[float]
+    radius
         Radius for search in degrees (default: 1.5)
     """
 
