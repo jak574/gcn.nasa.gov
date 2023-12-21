@@ -48,16 +48,6 @@ acrossapi_users
   api_key String
   userlevel Number
 
-acrossapi_jobs
-  jobnumber *String
-  username **String
-  reqtype String
-  began String
-  created String
-  expires String
-  params String
-  result String
-
 burstcube_tle
   epoch *String
   tle1 String
