@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 
 from fastapi import HTTPException
 
-from ..across.jobs import check_cache, register_job
 from ..base.config import set_observatory
 from ..base.pointing import PointingBase
 from ..base.schema import JobInfo
@@ -47,8 +46,6 @@ class SwiftPointing(PointingBase):
         if self.validate_get():
             self.get()
 
-    @check_cache
-    @register_job
     def get(self) -> bool:
         """Calculate list of spacecraft pointings for a given date range.
 
