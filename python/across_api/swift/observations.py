@@ -26,34 +26,34 @@ class SwiftObservations(PlanBase):
 
     Parameters
     ----------
-    username : str
+    username
         API username
-    api_key : str
+    api_key
         API key
-    ra : float
+    ra
         Right Ascension in decimal degrees
-    dec : float
+    dec
         Declination in decimal degrees
-    begin : datetime
+    begin
         Start time of visibility search
-    end : datetime
+    end
         End time of visibility search
-    radius : float
+    radius
         Search radius in degrees (default: XRT FOV)
-    limit : int
+    limit
         Maximum number of entries to return (default: 1000)
-    obsid : str, list
+    obsid
         Observation ID(s) to query
-    targetid : int, list
+    targetid
         Target ID(s) to query
 
     Attributes
     ----------
-    entries : list
+    entries
         List of SwiftPlanEntry entries
-    status : JobInfo
+    status
         Info about SwiftPlan query
-    plan_max : datetime
+    plan_max
         Latest observation in the observations database
     """
 

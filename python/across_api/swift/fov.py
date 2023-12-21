@@ -18,26 +18,26 @@ class SwiftFOVCheck(FOVCheckBase):
 
     Parameters
     ----------
-    ra : float
+    ra
         Right Ascension in decimal degrees
-    dec : float
+    dec
         Declination in decimal degrees
-    begin : datetime
+    begin
         Start time of visibility search
-    end : datetime
+    end
         End time of visibility search
-    stepsize : int
+    stepsize
         Step size in seconds for visibility calculations
-    earthoccult : bool
+    earthoccult
         Calculate Earth occultation (default: True)
-    instrument : Literal["XRT", "UVOT", "BAT"]
+    instrument
         Instrument to check (default: "XRT")
 
     Attributes
     ----------
-    entries : List[SwiftPointing]
+    entries
         List of SwiftPointing entries
-    status : JobInfo
+    status
         Info about SwiftFOVCheck query
     """
 
