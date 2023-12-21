@@ -24,15 +24,15 @@ class NICERVisibility(ACROSSAPIBase):
 
     Parameters
     ----------
-    ra : float
+    ra
         RA in decimal degrees of visibility target
-    dec : float
+    dec
         Declination in decimal degrees of visibility target
-    begin : datetime
+    begin
         Start time for visibility calculation
-    end : datetime
+    end
         End time of visibility calculation
-    stepsize : int
+    stepsize
         Step size in seconds for visibility calculation (default 60).
         Note ignore for NICER, just here for compatibility.
     """
