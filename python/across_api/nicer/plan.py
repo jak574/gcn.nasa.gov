@@ -2,7 +2,6 @@ import os
 from datetime import datetime
 from typing import Optional, Union
 
-from ..across.jobs import check_cache, register_job
 from ..across.user import check_api_key
 from ..base.config import set_observatory
 from ..base.plan import PlanBase
@@ -75,7 +74,6 @@ class NICERPlan(PlanBase):
         self.status: JobInfo = JobInfo()
 
     @check_api_key(anon=False, requser=["nicer", "jak51"])
-    @register_job
     def put(self) -> bool:
         """
         Put a plan into the database.
@@ -87,9 +85,7 @@ class NICERPlan(PlanBase):
         """
         return super().put()
 
-    @check_cache
-    @register_job
-    def get(self) -> Optional[bool]:
+    def get(self) -> bool:
         """
         Get a plan from the database.
 

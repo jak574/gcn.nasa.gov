@@ -3,7 +3,6 @@ from typing import Literal, Optional
 
 import numpy as np
 
-from ..across.jobs import check_cache, register_job
 from ..base.config import set_observatory
 from ..base.fov import FOVCheckBase
 from ..base.schema import JobInfo
@@ -73,8 +72,6 @@ class SwiftFOVCheck(FOVCheckBase):
         if self.validate_get():
             self.get()
 
-    @check_cache
-    @register_job
     def get(self):
         """Calculate list of SwiftPointing entries for a given date range.
 

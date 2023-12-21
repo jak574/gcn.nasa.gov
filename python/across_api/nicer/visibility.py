@@ -5,7 +5,6 @@ import requests
 import xmltodict  # type: ignore
 from fastapi import HTTPException
 
-from ..across.jobs import check_cache, register_job
 from ..base.common import ACROSSAPIBase
 from ..base.config import set_observatory
 from ..base.schema import JobInfo, VisibilityGetSchema, VisWindow
@@ -69,8 +68,6 @@ class NICERVisibility(ACROSSAPIBase):
             # Perform Query
             self.get()
 
-    @check_cache
-    @register_job
     def get(self) -> bool:
         """
         Query NICER visibility using the online NICER NICERVisibility calculator.

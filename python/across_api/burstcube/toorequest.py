@@ -8,7 +8,6 @@ from fastapi import HTTPException
 from sqlalchemy import between, select
 from sqlalchemy.orm import Session
 
-from ..across.jobs import register_job
 from ..across.user import check_api_key
 from ..api_db import engine, sa_angular_distance
 from ..base.common import ACROSSAPIBase
@@ -107,7 +106,6 @@ class BurstCubeTOO(ACROSSAPIBase):
                 setattr(self, k, v)
 
     @check_api_key(anon=False)
-    @register_job
     def get(self) -> bool:
         """
         Fetch a BurstCubeTOO for a given id.
@@ -135,7 +133,6 @@ class BurstCubeTOO(ACROSSAPIBase):
         return False
 
     @check_api_key(anon=False)
-    @register_job
     def delete(self) -> bool:
         """
         Delete a given too, specified by id. username of BurstCubeTOO has to match yours.
@@ -226,7 +223,6 @@ class BurstCubeTOO(ACROSSAPIBase):
         return True
 
     @check_api_key(anon=False)
-    @register_job
     def put(self) -> bool:
         """
         Alter existing BurstCube BurstCubeTOO using ACROSS API using POST
@@ -340,7 +336,6 @@ class BurstCubeTOO(ACROSSAPIBase):
         return True
 
     @check_api_key(anon=False)
-    @register_job
     def post(self) -> bool:
         """
         Upload BurstCubeTOO to ACROSS API using POST
@@ -469,7 +464,6 @@ class BurstCubeTOORequests(ACROSSAPIBase):
             self.get()
 
     @check_api_key(anon=False)
-    @register_job
     def get(self) -> bool:
         """
         Get a list of BurstCubeTOO requests

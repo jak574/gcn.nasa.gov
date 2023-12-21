@@ -2,7 +2,6 @@ import os
 from datetime import datetime
 from typing import Optional, Union
 
-from ..across.jobs import check_cache, register_job
 from ..across.user import check_api_key
 from ..base.config import set_observatory
 from ..base.plan import PlanBase
@@ -99,12 +98,9 @@ class SwiftObservations(PlanBase):
         return self.entries[i]
 
     @check_api_key(anon=False, requser=["jak51"])
-    @register_job
     def put(self):
         return super().put()
 
-    @check_cache
-    @register_job
     def get(self):
         return super().get()
 
