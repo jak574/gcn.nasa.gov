@@ -3,4 +3,5 @@ mypy
 pytest
 types-requests
 types-cachetools
+sqlalchemy-stubs
 -r python/requirements.txt
