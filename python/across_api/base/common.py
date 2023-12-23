@@ -1,3 +1,7 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 import os
 from time import tzset
 from typing import Any, List, Type
@@ -5,7 +9,7 @@ from typing import Any, List, Type
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from .schema import BaseSchema, ConfigSchema, JobInfo
+from .schema import BaseSchema
 
 # Make sure we are working in UTC times
 os.environ["TZ"] = "UTC"
@@ -28,13 +32,11 @@ class ACROSSAPIBase:
     _post_schema: Type[BaseSchema]
     _del_schema: Type[BaseSchema]
     _entry_schema: Type[BaseSchema]
-    config: ConfigSchema
 
     # Common things in API classes
-    status: JobInfo
     entries: List[Any] = []
 
-    def __getitem__(self, i) -> Any:
+    def __getitem__(self, i: int) -> Any:
         return self.entries[i]
 
     @property

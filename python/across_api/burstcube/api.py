@@ -1,3 +1,7 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from datetime import datetime
 from io import BytesIO
 from typing import Annotated, Optional
@@ -9,6 +13,7 @@ from ..base.api import (
     ClassificationDep,
     DateRangeDep,
     EarthOccultDep,
+    EpochDep,
     ErrorRadiusDep,
     ExposureDep,
     IdDep,
@@ -26,7 +31,7 @@ from ..base.api import (
     TriggerTimeDep,
     app,
 )
-from ..base.schema import EphemSchema, SAASchema
+from ..base.schema import EphemSchema, SAASchema, TLESchema
 from ..functions import convert_to_dt
 from .ephem import BurstCubeEphem
 from .fov import BurstCubeFOVCheck
@@ -36,6 +41,7 @@ from .schema import (
     BurstCubeTOORequestsSchema,
     BurstCubeTOOSchema,
 )
+from .tle import BurstCubeTLE
 from .toorequest import BurstCubeTOO, BurstCubeTOOPutSchema, BurstCubeTOORequests
 from .visibility import BurstCubeVisibility, BurstCubeVisibilitySchema
 
@@ -57,7 +63,7 @@ OptionalTriggerTimeDep = Annotated[datetime, Depends(optional_trigger_time)]
 
 
 # BurstCube endpoints
-@app.get("/BurstCube/Ephem")
+@app.get("/burstcube/ephem")
 async def burstcube_ephemeris(
     daterange: DateRangeDep,
     stepsize: StepSizeDep,
@@ -70,7 +76,7 @@ async def burstcube_ephemeris(
     ).schema
 
 
-@app.get("/BurstCube/FOVCheck")
+@app.get("/burstcube/fovcheck")
 async def burstcube_fov_check(
     ra_dec: RaDecDep,
     daterange: DateRangeDep,
@@ -92,7 +98,7 @@ async def burstcube_fov_check(
     return fov.schema
 
 
-@app.get("/BurstCube/SAA")
+@app.get("/burstcube/saa")
 async def burstcube_saa(
     daterange: DateRangeDep,
     stepsize: StepSizeDep,
@@ -103,7 +109,7 @@ async def burstcube_saa(
     return BurstCubeSAA(stepsize=stepsize, **daterange).schema
 
 
-@app.post("/BurstCube/TOO", status_code=status.HTTP_201_CREATED)
+@app.get("/burstcube/too", status_code=status.HTTP_201_CREATED)
 async def burstcube_too_submit(
     user: LoginDep,
     ra_dec: OptionalRaDecDep,
@@ -152,7 +158,7 @@ async def burstcube_too_submit(
     return too.schema
 
 
-@app.put("/BurstCube/TOO/{id}", status_code=status.HTTP_201_CREATED)
+@app.put("/burstcube/too/{id}", status_code=status.HTTP_201_CREATED)
 async def burstcube_too_update(
     user: LoginDep,
     id: IdDep,
@@ -166,7 +172,7 @@ async def burstcube_too_update(
     return too.schema
 
 
-@app.get("/BurstCube/TOO/{id}", status_code=status.HTTP_200_OK)
+@app.get("/burstcube/too/{id}", status_code=status.HTTP_200_OK)
 async def burstcube_too(
     user: LoginDep,
     id: IdDep,
@@ -179,7 +185,7 @@ async def burstcube_too(
     return too.schema
 
 
-@app.delete("/BurstCube/TOO/{id}", status_code=status.HTTP_200_OK)
+@app.delete("/burstcube/too/{id}", status_code=status.HTTP_200_OK)
 async def burstcube_delete_too(
     user: LoginDep,
     id: IdDep,
@@ -192,7 +198,7 @@ async def burstcube_delete_too(
     return too.schema
 
 
-@app.get("/BurstCube/TOORequests")
+@app.get("/burstcube/toorequests")
 async def burstcube_too_requests(
     user: LoginDep,
     daterange: OptionalDateRangeDep,
@@ -215,7 +221,7 @@ async def burstcube_too_requests(
     ).schema
 
 
-@app.get("/BurstCube/Visibility")
+@app.get("/burstcube/visibility")
 async def burstcube_visibility(
     daterange: DateRangeDep,
     ra_dec: RaDecDep,
@@ -229,3 +235,13 @@ async def burstcube_visibility(
         ra=ra_dec["ra"],
         dec=ra_dec["dec"],
     ).schema
+
+
+@app.get("/burstcube/tle")
+async def burstcube_tle(
+    epoch: EpochDep,
+) -> TLESchema:
+    """
+    Returns the best TLE for BurstCube for a given epoch.
+    """
+    return BurstCubeTLE(epoch=epoch).schema

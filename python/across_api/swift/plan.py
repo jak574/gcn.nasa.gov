@@ -1,3 +1,7 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 import os
 from datetime import datetime
 from typing import List, Optional, Type, Union
@@ -5,7 +9,7 @@ from typing import List, Optional, Type, Union
 from ..across.user import check_api_key
 from ..base.config import set_observatory
 from ..base.plan import PlanBase
-from ..base.schema import ConfigSchema, JobInfo
+from ..base.schema import ConfigSchema
 from .config import SWIFT
 from .models import SwiftPlanEntryModel
 from .schema import SwiftPlanEntry, SwiftPlanGetSchema, SwiftPlanSchema
@@ -86,7 +90,6 @@ class SwiftPlan(PlanBase):
             self.radius = self.config.instruments[1].fov.dimension
         self.plan_max: Optional[datetime] = None
         self.entries: List[SwiftPlanEntry] = list()
-        self.status: JobInfo = JobInfo()
 
     def __getitem__(self, i) -> SwiftPlanEntry:
         return self.entries[i]

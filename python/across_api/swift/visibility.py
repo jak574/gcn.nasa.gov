@@ -1,9 +1,13 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from datetime import datetime, time, timedelta
 from typing import List
 
 from ..base.common import ACROSSAPIBase
 from ..base.config import set_observatory
-from ..base.schema import JobInfo, VisWindow
+from ..base.schema import VisWindow
 from ..base.visibility import VisibilityBase, VisibilityGetSchema, VisibilitySchema
 from .config import SWIFT
 from .ephem import Ephem
@@ -42,7 +46,6 @@ class SwiftVisibility(VisibilityBase, ACROSSAPIBase):
 
     # Attributes
     entries: List[VisWindow]
-    status: JobInfo
 
     # Internal parameters
     _ephem: Ephem
@@ -61,7 +64,6 @@ class SwiftVisibility(VisibilityBase, ACROSSAPIBase):
         self.isat = False
         # Attributes
         self.entries = []
-        self.status = JobInfo()
 
         # Run GET automatically if parameters are valid, this is a GET only API
         if self.validate_get():

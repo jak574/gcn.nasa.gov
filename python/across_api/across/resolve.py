@@ -1,3 +1,7 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 import json
 from typing import Optional, Tuple
 
@@ -42,6 +46,7 @@ def antares_radec(ztf_id: str) -> Tuple[Optional[float], Optional[float]]:
         dec = antares_data["data"][0]["attributes"]["dec"]
     else:
         ra = dec = None
+
     return ra, dec
 
 

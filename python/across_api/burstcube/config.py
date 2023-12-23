@@ -1,3 +1,9 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
+from datetime import datetime
+
 import astropy.units as u  # type: ignore
 import numpy as np
 
@@ -59,10 +65,10 @@ BURSTCUBE = {
     # Information on where to obtain a TLE for this Observatory
     "tle": {
         "tle_bad": 40,  # days
-        "tle_url": None,
         "tle_name": "ISS (ZARYA)",
-        "tle_heasarc": None,
-        "tle_celestrak": "https://celestrak.org/NORAD/elements/gp.php?INTDES=1998-067",
+        "tle_concat": None,
+        "tle_url": "https://celestrak.org/NORAD/elements/gp.php?INTDES=1998-067",
+        "tle_min_epoch": datetime(2023, 12, 22),
     },
 }
 

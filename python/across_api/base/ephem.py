@@ -1,3 +1,7 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from datetime import datetime, timedelta
 from typing import List, Optional
 
@@ -19,11 +23,11 @@ from fastapi import HTTPException
 from sgp4.api import Satrec  # type: ignore
 
 from .common import ACROSSAPIBase
-from .schema import EphemGetSchema, EphemSchema, JobInfo
+from .schema import EphemGetSchema, EphemSchema
 from .tle import TLEEntry
 
 # Constants
-EARTH_RADIUS = 6371  # 6378.140  # km
+EARTH_RADIUS = 6371  # km. Note this is average radius, as Earth is not a sphere.
 
 
 class EphemBase(ACROSSAPIBase):
@@ -39,7 +43,7 @@ class EphemBase(ACROSSAPIBase):
     end: datetime
     stepsize: int
     # ap_times: Time
-    status: JobInfo
+
     username: str
     parallax: bool
     velocity: bool
@@ -65,7 +69,6 @@ class EphemBase(ACROSSAPIBase):
         self.datetimes: List[datetime]
 
         # Attributes
-        self.status = JobInfo()
 
     def __len__(self) -> int:
         return len(self.timestamp)
@@ -264,7 +267,7 @@ class EphemBase(ACROSSAPIBase):
         (position) and km/s (velocity).
 
         These are stored as floats to allow easy serialization into JSON,
-        for download and caching.
+        download and caching. Derived values are calculated on the fly.
         """
 
         # Set up the time stuff
@@ -288,7 +291,7 @@ class EphemBase(ACROSSAPIBase):
             dtstart + timedelta(seconds=t * self.stepsize) for t in range(entries)
         ]
 
-        # Calculate GCRS for Satellite
+        # Calculate GCRS position for Satellite
         _, temes_p, temes_v = self.satellite.sgp4_array(
             self.ap_times.jd1, self.ap_times.jd2
         )
@@ -336,7 +339,7 @@ class EphemBase(ACROSSAPIBase):
         self.longitude = 180 - lon_lat_dist.lon.deg
         self.latitude = lon_lat_dist.lat.deg
 
-        # Calculate Angular size of Earth in degrees
+        # Calculate Angular size of Earth in degrees, note assumes Earth is spherical
         earth_distance = lon_lat_dist.distance.to(u.km).value
         self.earthsize = np.degrees(np.arcsin(EARTH_RADIUS / earth_distance))
 
@@ -346,10 +349,8 @@ class EphemBase(ACROSSAPIBase):
             self.velvec = self.gcrs.velocity.d_xyz.to(u.km / u.s).value.T
 
             # Calculate orbit pole vector
-            # uposvec = (self.posvec.T / self.gcrs.cartesian.norm().value).T
             _, uposvec = pn(self.posvec)
             _, uvelvec = pn(self.velvec)
-            # uvelvec = (self.velvec.T / self.gcrs.velocity.norm().to(u.km / u.s).value).T
             # The pole vector is the cross product of the unit position and velocity vectors
             # Uses erfa pxp function, which is a bit faster than numpy cross
             self.polevec = pxp(uposvec, uvelvec)

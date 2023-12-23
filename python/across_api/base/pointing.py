@@ -1,9 +1,13 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from datetime import datetime, timedelta
 from typing import List
 
 from ..functions import round_time
 from .common import ACROSSAPIBase
-from .schema import JobInfo, PointBase, PointingGetSchemaBase, PointingSchemaBase
+from .schema import PointBase, PointingGetSchemaBase, PointingSchemaBase
 
 
 class PointingBase(ACROSSAPIBase):
@@ -31,7 +35,6 @@ class PointingBase(ACROSSAPIBase):
     stepsize: int = 60
     begin: datetime
     end: datetime
-    status: JobInfo
 
     @property
     def times(self) -> List[datetime]:

@@ -1,10 +1,13 @@
-from datetime import datetime
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
+from datetime import datetime, timezone
 from typing import Annotated, Optional
 
 from fastapi import Depends, FastAPI, Path, Query
 
-from ..functions import convert_to_dt
-
+# FastAPI app definition
 app = FastAPI(
     title="ACROSS API",
     summary="Astrophysics Cross-Observatory Science Support (ACROSS).",
@@ -12,8 +15,43 @@ app = FastAPI(
     contact={
         "email": "support@gcn.nasa.gov",
     },
-    root_path="/labs/api/v1",
+    #    root_path="/labs/api/v1",
 )
+
+
+def to_naive_utc(value: Optional[datetime]) -> Optional[datetime]:  #
+    """
+    Converts a datetime object to a naive datetime object in UTC timezone.
+
+    Arguments
+    ---------
+    value
+        The datetime object to be converted.
+
+    Returns
+    -------
+        The converted naive datetime object in UTC timezone.
+    """
+    if value is None:
+        return None
+
+    return value.astimezone(tz=timezone.utc).replace(tzinfo=None)
+
+
+# Globally defined Depends definitions
+async def epoch(
+    epoch: Annotated[
+        datetime,
+        Query(
+            title="Epoch",
+            description="Epoch in UTC or ISO format.",
+        ),
+    ],
+) -> Optional[datetime]:
+    return to_naive_utc(epoch)
+
+
+EpochDep = Annotated[datetime, Depends(epoch)]
 
 
 # Depends functions for FastAPI calls.
@@ -29,7 +67,7 @@ async def daterange(
     """
     Helper function to convert begin and end to datetime objects.
     """
-    return {"begin": convert_to_dt(begin), "end": convert_to_dt(end)}
+    return {"begin": to_naive_utc(begin), "end": to_naive_utc(end)}
 
 
 DateRangeDep = Annotated[dict, Depends(daterange)]
@@ -55,7 +93,7 @@ async def optional_daterange(
     """
     Helper function to convert begin and end to datetime objects.
     """
-    return {"begin": convert_to_dt(begin), "end": convert_to_dt(end)}
+    return {"begin": to_naive_utc(begin), "end": to_naive_utc(end)}
 
 
 OptionalDateRangeDep = Annotated[dict, Depends(optional_daterange)]
@@ -229,7 +267,7 @@ async def earth_occult(
 
 EarthOccultDep = Annotated[bool, Depends(earth_occult)]
 
-IdDep = Annotated[int, Path(description="TOO ID number")]
+IdDep = Annotated[str, Path(description="TOO ID string")]
 
 
 async def trigger_time(
@@ -240,8 +278,8 @@ async def trigger_time(
             description="Time of trigger in UTC or ISO format.",
         ),
     ],
-) -> datetime:
-    return convert_to_dt(trigger_time)
+) -> Optional[datetime]:
+    return to_naive_utc(trigger_time)
 
 
 TriggerTimeDep = Annotated[datetime, Depends(trigger_time)]

@@ -1,31 +1,39 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
+import logging
 from datetime import datetime, timedelta
 from typing import List, Optional
 
 import requests
+from requests import HTTPError
 
-from ..api_db import dydbtable, engine
-from .models import TLEEntryModelBase
-from .schema import TLEEntry
+from .common import ACROSSAPIBase
+from .models import TLEEntry
+from .schema import TLEGetSchema, TLESchema
 
 
-class TLEBase:
+class TLEBase(ACROSSAPIBase):
     """
-    Class that reads and updates TLEs for Satellite from a database,
-    and returns a skyfield EarthSatellite based on downloaded TLE file.
-    If no TLEs are found, it will download the latest TLE from the internet,
-    using various sources, e.g. HEASARC, Celestrak, etc.
+    Class that reads and updates TLEs for Satellite from a database, and
+    returns a skyfield EarthSatellite based on downloaded TLE file. If no TLEs
+    are found, it will download the latest TLE from the internet, using various
+    sources, e.g. CONCAT, Celestrak, etc.
 
     Parameters
     ----------
-    epoch : datetime
+    epoch
         Epoch of TLE to retrieve
 
     Attributes
     ----------
-    tles : list
+    tles
         List of TLEs currently loaded
-    tle : TLEEntry
+    tle
         TLE entry for given epoch
+    offset
+        Offset between TLE epoch and requested epoch in days
 
     Methods
     -------
@@ -35,80 +43,165 @@ class TLEBase:
         Check if the given TLE is out of date
     read_tle_web
         Read TLE from dedicated weblink
-    read_tle_heasarc
-        Read TLEs in the HEASARC MISSION_TLE_ARCHIVE.tle format
-    read_tle_celestrak
-        Return latest TLE from Celestrak
-    read_db
+    read_tle_concat
+        Read TLEs in the concatenated format
+    read_tle_db
         Read the best TLE for a given epoch from the local database of TLEs
     write_db
         Write a TLE to the database
-    read_db_all_tles
+    write_db_all_tles
         Write all loaded TLEs to database
     """
 
+    _schema = TLESchema
+    _get_schema = TLEGetSchema
+
     # Configuration parameters
-    tle_heasarc: str
-    tle_url: str
-    tle_celestrak: str
-    tle_bad: int
+    tle_concat: Optional[str]
+    tle_url: Optional[str]
+    tle_bad: float
     tle_name: str
+    tle_min_epoch: datetime
     # Arguments
     epoch: datetime
-    tles: List[TLEEntry]
+    # Attributes
+    tles: List[TLEEntry] = []
+    # Return values
+    error: Optional[str]
 
-    def __init__(self):
-        self.tlemodel = TLEEntryModelBase
-        self.engine = engine
+    def __init__(self, epoch: datetime):
+        """
+        Initialize a TLE object with the given epoch.
 
-    def read_tle_web(self) -> bool:
-        """Read TLE from dedicated weblink"""
-
-        # Download TLE from internet
-        print(f"Downloading latest TLE for {self.tle_name}")
-        try:
-            tlefile = requests.get(self.tle_url).text.splitlines()
-        except Exception:
-            return False
-
-        # Load the TLE
-        tle = TLEEntry(tle1=tlefile[-2].strip(), tle2=tlefile[-1].strip())
-        self.tles.append(tle)
-
-        # No good TLE was found
-        if self.tle_out_of_date:
-            return False
-
-        return True
-
-    def read_tle_heasarc(self) -> bool:
-        """Read TLEs in the HEASARC MISSION_TLE_ARCHIVE.tle format"""
-
-        # Fetch TLE file off the web
-        tleweb = requests.get(self.tle_heasarc)
-        if tleweb.status_code == 200:
-            tlefile = tleweb.text.splitlines()
-        else:
-            return False
-
-        # Parse the file
+        Arguments
+        ---------
+        epoch
+            The epoch of the TLE object.
+        """
+        self.epoch = epoch
         self.tles = []
-        for i in range(0, len(tlefile), 2):
-            # Create the TLEEntry
-            tle = TLEEntry(tle1=tlefile[i].strip(), tle2=tlefile[i + 1].strip())
+        if self.validate_get():
+            self.get()
 
-            # Append it to the list of TLEs
-            self.tles.append(tle)
-        return True
-
-    @property
-    def tle(self) -> Optional[TLEEntry]:
-        """Return the best TLE out of the TLEs currently loaded for a the given epoch
+    def read_tle_db(self) -> bool:
+        """
+        Read the best TLE for a given epoch from the local database of TLEs
 
         Returns
         -------
-        Optional[TLEEntry]
-            Best TLE for the given epoch
+            Did it work?
+        """
+        # Read TLEs from the database for a given `tle_name` and epoch within
+        # the allowed range
+        self.tles = TLEEntry.find_tles_between_epochs(
+            self.tle_name,
+            self.epoch - timedelta(days=self.tle_bad),
+            self.epoch + timedelta(days=self.tle_bad),
+        )
+
+        return True
+
+    def read_tle_web(self) -> bool:
+        """
+        Read TLE from dedicated weblink.
+
+        This method downloads the TLE (Two-Line Elements) from a dedicated
+        weblink. It retrieves the TLE data, parses it, and stores the valid TLE
+        entries in a list. Often websites (e.g. Celestrak) will have multiple
+        TLEs for a given satellite, so this method will only store the TLEs
+        that match the given satellite name, as stored in the `tle_name`
+        attribute.
+
+        Returns
+        -------
+            True if the TLE was successfully read and stored, False otherwise.
+        """
+        # Check if the URL is set
+        if self.tle_url is None:
+            return False
+
+        # Download TLE from internet
+        r = requests.get(self.tle_url)
+        try:
+            # Check for HTTP errors
+            r.raise_for_status()
+        except HTTPError as e:
+            logging.exception(e)
+            return False
+
+        # Read valid TLEs into a list
+        tlefile = r.text.splitlines()
+        tles = [
+            TLEEntry(
+                satname=tlefile[i].strip(),
+                tle1=tlefile[i + 1].strip(),
+                tle2=tlefile[i + 2].strip(),
+            )
+            for i in range(0, len(tlefile), 3)
+            if self.tle_name in tlefile[i]
+        ]
+
+        # Append them to the list of stored TLEs
+        self.tles.extend(tles)
+
+        # Check if a good TLE for the current epoch was found
+        if self.tle_out_of_date is False:
+            return True
+
+        return False
+
+    def read_tle_concat(self) -> bool:
+        """
+        Read TLEs in the CONCAT MISSION_TLE_ARCHIVE.tle format. This format is
+        used by the CONCAT to store TLEs for various missions. The format
+        consists of a concatenation of all available TLEs, without the name
+        header.
+
+        Returns
+        -------
+            True if TLEs were successfully read, False otherwise.
+        """
+        # Check if the URL is set
+        if self.tle_concat is None:
+            return False
+
+        # Download TLEs from internet
+        r = requests.get(self.tle_concat)
+        try:
+            # Check for HTTP errors
+            r.raise_for_status()
+        except HTTPError as e:
+            logging.exception(e)
+            return False
+
+        # Parse the file into a list of TLEEntry objects
+        tlefile = r.text.splitlines()
+        tles = [
+            TLEEntry(
+                satname=self.tle_name,
+                tle1=tlefile[i].strip(),
+                tle2=tlefile[i + 1].strip(),
+            )
+            for i in range(0, len(tlefile), 2)
+        ]
+
+        # Append that list to the list of TLEs
+        self.tles.extend(tles)
+
+        # Check if a good TLE for the requested epoch was found
+        if self.tle_out_of_date is False:
+            return True
+        return False
+
+    @property
+    def tle(self) -> Optional[TLEEntry]:
+        """
+        Return the best TLE out of the TLEs currently loaded for a the given
+        epoch.
+
+        Returns
+        -------
+            Best TLE for the given epoch, or None if no TLEs are loaded.
         """
         if self.epoch is not None and len(self.tles) > 0:
             return min(
@@ -116,158 +209,92 @@ class TLEBase:
             )
         return None
 
-    def read_tle_celestrak(self) -> bool:
-        """Return latest TLE from Celestrak
-
-        Returns
-        -------
-        bool
-            Did it work?
-        """
-        # Fetch TLE file from Celestrak
-        try:
-            req = requests.get(self.tle_celestrak)
-        except Exception:
-            return False
-        if req.status_code == 200:
-            urltles = req.text
-        else:
-            print(f"ERROR: Celestrack returned {req.status_code}.")
-            return False
-
-        # Read in Celestrak combined TLE and fetch the one we want
-        lines = urltles.splitlines()
-        tle = []
-        go = False
-        for line in lines:
-            if go:
-                tle.append(line)
-            if line.strip() == self.tle_name:
-                go = True
-            if len(tle) == 2:
-                go = False
-
-        # Create the self.tlemodel
-        self.tles.append(TLEEntry(tle1=tle[0], tle2=tle[1]))
-
-        return True
-
     @property
-    def tle_out_of_date(self) -> bool:
-        """Is this TLE outside of the allowed range?
+    def tle_out_of_date(self) -> Optional[bool]:
+        """
+        Is this TLE outside of the allowed range?
 
         Returns
         -------
-        bool
-            Is this TLE out of date?
+            True if the epoch of the loaded TLE is more the `tle_bad` days off.
+            Returns None if no TLE is loaded.
         """
-        if self.tle is not None:
-            if (
-                abs((self.epoch - self.tle.epoch).total_seconds() / 86400)
-                > self.tle_bad
-            ):
-                return True
+        # Check if we have a TLE
+        if self.tle is None:
+            return None
+
+        # Calculate the number of days between the TLE epoch and the requested
+        # epoch. If this is greater than the allowed number of days (given by
+        # `tle_bad`), then return True
+        if abs((self.epoch - self.tle.epoch).total_seconds() / 86400) > self.tle_bad:
+            return True
         return False
 
-    def get(self, epoch: Optional[datetime] = None) -> Optional[TLEEntry]:
-        """Read in the best TLE for a given epoch.
+    def get(self) -> bool:
+        """
+        Find in the best TLE for a given epoch. This method will first try to
+        read the TLE from the local database. If that fails, it will try to
+        read the TLE from the internet (with support for two different TLE
+        formats). If that fails, it will return False, indicating that no TLE
+        was found.
 
         Parameters
         ----------
-        epoch : datetime
-            Epoch for which you want to retrieve a TLE
+        epoch
+            Epoch for which you want to retrieve a TLE.
 
         Returns
         -------
-        Optional[TLEEntry]
-            Best TLE for the given epoch
-
+            True if a TLE was found, False otherwise.
         """
-        if epoch is not None:
-            self.epoch = epoch
-        # Try reading from the database first
-        if self.read_db() is True:
+
+        # Check if the requested arguments are valid
+        if self.validate_get() is False:
+            return False
+
+        # Check that the epoch is within the allowed range. If set
+        # to before `tle_min_epoch`, then set it to `tle_min_epoch`. If set to
+        # a value in the future, then set it to the current time to give the most
+        # up to date TLE.
+        if self.epoch < self.tle_min_epoch:
+            self.epoch = self.tle_min_epoch
+        elif self.epoch > datetime.utcnow():
+            self.epoch = datetime.utcnow()
+
+        # Fetch TLE from the TLE database
+        if self.read_tle_db() is True:
             if self.tle is not None:
-                return self.tle
+                print(
+                    f"Found TLE for {self.tle.satname} in database with epoch {self.tle.epoch}"
+                )
+                return True
 
-        # Next try reading from the web
+        # Next try try reading the TLE given in the concatenated format at the
+        # URL given by `tle_concat`. Concatenated format should have every TLE
+        # for the satellite since launch in a single file, so it's safe to
+        # query this for any date within the mission lifetime. For an example
+        # of this format (for the NuSTAR mission), see here:
+        # https://nustarsoc.caltech.edu/NuSTAR_Public/NuSTAROperationSite/NuSTAR.tle
+        if self.tle_concat is not None:
+            if self.read_tle_concat() is True:
+                # Write the TLE to the database for next time
+                if self.tle is not None:
+                    self.tle.write()
+                    print(f"Found TLE in concatenated file with epoch {self.tle.epoch}")
+                    return True
+
+        # Finally try reading from the web at the URL given by `tle_url`. Note
+        # that URL based TLEs are usually only valid for the current epoch, so
+        # we will only use this if the epoch being requested is within
+        # `tle_bad` days of the current epoch.
         if self.tle_url is not None:
-            if self.read_tle_web() is True:
-                # Write this TLE to the database for next time
-                self.write_db()
-                return self.tle
+            if self.epoch > datetime.utcnow() - timedelta(days=self.tle_bad):
+                if self.read_tle_web() is True:
+                    # Write the TLE to the database for next time
+                    if self.tle is not None:
+                        self.tle.write()
+                        print(f"Found TLE on web with epoch {self.tle.epoch}")
+                        return True
 
-        # Try reading in the HEASARC format
-        if self.tle_heasarc is not None:
-            if self.read_tle_heasarc() is True:
-                self.write_db()
-                return self.tle
-        # Last resort, get it off Celestrak
-        if self.tle_celestrak is not None and abs(
-            self.epoch - datetime.now()
-        ) < timedelta(days=self.tle_bad):
-            if self.read_tle_celestrak() is True:
-                self.write_db()
-                return self.tle
-
-        return None
-
-    def read_db(self) -> bool:
-        """
-        Read the best TLE for a given epoch from the local database of TLEs
-
-        Returns
-        -------
-        bool
-            Did it work?
-        """
-
-        tles = self.tlemodel.find_keys_between_epochs(
-            self.epoch - timedelta(days=self.tle_bad),
-            self.epoch + timedelta(days=self.tle_bad),
-        )
-
-        self.tles = [TLEEntry(**tle.__dict__) for tle in tles]
-
-        return True
-
-    def write_db(self) -> bool:
-        """
-        Write a TLE to the database
-
-        Returns
-        -------
-        bool
-            Did it work?
-        """
-        # Write out the data to the table
-        if self.tle is not None:
-            tledb = self.tlemodel(
-                epoch=str(self.tle.epoch), tle1=self.tle.tle1, tle2=self.tle.tle2
-            )
-            tledb.save()
-        return True
-
-    def write_db_all_tles(self) -> bool:
-        """Write all loaded TLEs to database
-
-        Returns
-        -------
-        bool
-            Did it work?
-
-        """
-        # Load everything already in the table
-        table = dydbtable(self.tlemodel.__tablename__)
-        existing = table.scan()
-        epochs = [e["epoch"] for e in existing["Items"]]
-        # Write TLEs to database
-        with table.batch_writer() as batch:
-            for t in self.tles:
-                if t.epoch in epochs:
-                    continue
-                tdb = TLEEntryModelBase(epoch=str(t.epoch), tle1=t.tle1, tle2=t.tle2)
-                epochs.append(t.epoch)
-                batch.put_item(Item=tdb.__dict__)
-
-        return True
+        # If we did not find any valid TLEs, then return False
+        return False

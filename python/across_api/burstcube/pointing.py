@@ -1,8 +1,11 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from datetime import datetime
 
 from ..base.config import set_observatory
 from ..base.pointing import PointingBase
-from ..base.schema import JobInfo
 from .config import BURSTCUBE
 from .schema import BurstCubePoint, BurstCubePointingGetSchema, BurstCubePointingSchema
 
@@ -36,7 +39,7 @@ class BurstCubePointing(PointingBase):
         self.end = end
         self.stepsize = stepsize
         self.entries = []
-        self.status = JobInfo()
+
         if self._get_schema.model_validate(self):
             self.get()
 
@@ -51,7 +54,7 @@ class BurstCubePointing(PointingBase):
         # BurstCube isn't a pointed instrument, so these are just dummy values. Note that they
         # have to be not None otherwise FOVCheck will think the spacecraft isn't observing.
         self.entries = [
-            BurstCubePoint(time=t, ra=0, dec=0, roll=0, observing=True)
+            BurstCubePoint(timestamp=t, ra=0, dec=0, roll=0, observing=True)
             for t in self.times
         ]
         return True

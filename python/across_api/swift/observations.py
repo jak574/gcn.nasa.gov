@@ -1,3 +1,7 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 import os
 from datetime import datetime
 from typing import Optional, Union
@@ -5,7 +9,7 @@ from typing import Optional, Union
 from ..across.user import check_api_key
 from ..base.config import set_observatory
 from ..base.plan import PlanBase
-from ..base.schema import JobInfo
+from ..base.schema import ConfigSchema
 from .config import SWIFT
 from .models import SwiftObsEntryModel
 from .schema import (
@@ -26,34 +30,34 @@ class SwiftObservations(PlanBase):
 
     Parameters
     ----------
-    username
+    username : str
         API username
-    api_key
+    api_key : str
         API key
-    ra
+    ra : float
         Right Ascension in decimal degrees
-    dec
+    dec : float
         Declination in decimal degrees
-    begin
+    begin : datetime
         Start time of visibility search
-    end
+    end : datetime
         End time of visibility search
-    radius
+    radius : float
         Search radius in degrees (default: XRT FOV)
-    limit
+    limit : int
         Maximum number of entries to return (default: 1000)
-    obsid
+    obsid : str, list
         Observation ID(s) to query
-    targetid
+    targetid : int, list
         Target ID(s) to query
 
     Attributes
     ----------
-    entries
+    entries : list
         List of SwiftPlanEntry entries
-    status
+    status : JobInfo
         Info about SwiftPlan query
-    plan_max
+    plan_max : datetime
         Latest observation in the observations database
     """
 
@@ -62,6 +66,7 @@ class SwiftObservations(PlanBase):
     _get_schema = SwiftObservationsPutSchema  # type: ignore
     _entry_model = SwiftObsEntryModel
     _entry_schema = SwiftObsEntry  # type: ignore
+    config: ConfigSchema
 
     def __init__(
         self,
@@ -92,7 +97,6 @@ class SwiftObservations(PlanBase):
             self.radius = self.config.instruments[1].fov.dimension
         self.plan_max: Optional[datetime] = None
         self.entries: list = []
-        self.status: JobInfo = JobInfo()
 
     def __getitem__(self, i) -> SwiftObsEntry:
         return self.entries[i]

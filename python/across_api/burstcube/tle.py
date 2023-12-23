@@ -1,45 +1,18 @@
-from datetime import datetime
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
 
-from ..api_db import engine
+from cachetools import TTLCache, cached
+
 from ..base.config import set_observatory
 from ..base.tle import TLEBase
-from .config import BURSTCUBE
-from .models import BurstCubeTLEEntryModel
+from ..burstcube.config import BURSTCUBE
 
 
+@cached(cache=TTLCache(maxsize=128, ttl=3600))
 @set_observatory(BURSTCUBE)
 class BurstCubeTLE(TLEBase):
-    """
-    Class that reads and updates BurstCubeTLEs for a given Satellite in a database,
-    and returns a skyfield EarthSatellite based on BurstCubeTLE file for the correct epoch.
+    ...
 
 
-    Parameters
-    ----------
-    epoch : datetime
-        Epoch of BurstCubeTLE to retrieve
-
-    Attributes
-    ----------
-    tles : list
-        List of BurstCubeTLEs for given epoch
-    tle : BurstCubeTLEEntryModel
-        BurstCubeTLE entry for given epoch
-
-    Methods
-    -------
-    get
-        Get BurstCubeTLEs for given epoch
-
-    """
-
-    tlemodel = BurstCubeTLEEntryModel
-    engine = engine
-
-    def __init__(self, epoch: datetime):
-        self.epoch = epoch
-        self.tles = []
-
-
-# Shorthand alias
 TLE = BurstCubeTLE

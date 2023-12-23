@@ -1,3 +1,7 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from datetime import datetime
 from typing import List
 
@@ -7,7 +11,7 @@ from fastapi import HTTPException
 
 from ..base.common import ACROSSAPIBase
 from ..base.config import set_observatory
-from ..base.schema import JobInfo, VisibilityGetSchema, VisWindow
+from ..base.schema import VisibilityGetSchema, VisWindow
 from ..functions import convert_to_dt
 from .config import NICER
 from .schema import NICERVisibilitySchema, NICERVisWindow
@@ -50,7 +54,6 @@ class NICERVisibility(ACROSSAPIBase):
 
     # Attributes
     entries: List[VisWindow]
-    status: JobInfo
 
     def __init__(self, begin: datetime, end: datetime, ra: float, dec: float):
         self.ra = ra
@@ -62,7 +65,7 @@ class NICERVisibility(ACROSSAPIBase):
         self.data_dict = None
         self.username = "anonymous"
         self.stepsize = 60
-        self.status: JobInfo = JobInfo()
+
         # Parse argument keywords
         if self.validate_get():
             # Perform Query
