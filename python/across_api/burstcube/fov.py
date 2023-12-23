@@ -1,3 +1,7 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from datetime import datetime, time, timedelta
 from typing import Optional
 
@@ -5,7 +9,6 @@ import numpy as np
 
 from ..base.config import set_observatory
 from ..base.fov import FOVCheckBase
-from ..base.schema import JobInfo
 from ..burstcube.config import BURSTCUBE
 from .ephem import BurstCubeEphem
 from .pointing import BurstCubePointing
@@ -61,7 +64,7 @@ class BurstCubeFOVCheck(FOVCheckBase):
         self.end = end
         self.stepsize = stepsize
         self.earthoccult = earthoccult
-        self.status = JobInfo()
+
         self.instrument = "BurstCube"
         self.entries = []
 

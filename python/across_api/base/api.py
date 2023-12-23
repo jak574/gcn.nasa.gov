@@ -9,7 +9,7 @@ modules. Contains the FastAPI app definition.
 
 from fastapi import FastAPI, Query, Path, Depends
 from typing import Annotated, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 # FastAPI app definition
@@ -20,8 +20,43 @@ app = FastAPI(
     contact={
         "email": "support@gcn.nasa.gov",
     },
-    root_path="/labs/api/v1",
+    #    root_path="/labs/api/v1",
 )
+
+
+def to_naive_utc(value: Optional[datetime]) -> Optional[datetime]:  #
+    """
+    Converts a datetime object to a naive datetime object in UTC timezone.
+
+    Arguments
+    ---------
+    value
+        The datetime object to be converted.
+
+    Returns
+    -------
+        The converted naive datetime object in UTC timezone.
+    """
+    if value is None:
+        return None
+
+    return value.astimezone(tz=timezone.utc).replace(tzinfo=None)
+
+
+# Globally defined Depends definitions
+async def epoch(
+    epoch: Annotated[
+        datetime,
+        Query(
+            title="Epoch",
+            description="Epoch in UTC or ISO format.",
+        ),
+    ],
+) -> Optional[datetime]:
+    return to_naive_utc(epoch)
+
+
+EpochDep = Annotated[datetime, Depends(epoch)]
 
 
 # Depends functions for FastAPI calls.
@@ -237,7 +272,7 @@ async def earth_occult(
 
 EarthOccultDep = Annotated[bool, Depends(earth_occult)]
 
-IdDep = Annotated[int, Path(description="TOO ID number")]
+IdDep = Annotated[str, Path(description="TOO ID string")]
 
 
 async def trigger_time(

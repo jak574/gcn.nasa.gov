@@ -1,11 +1,14 @@
-import os
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from datetime import datetime
 from typing import Optional, Union
 
 from ..across.user import check_api_key
 from ..base.config import set_observatory
 from ..base.plan import PlanBase
-from ..base.schema import ConfigSchema, JobInfo
+from ..base.schema import ConfigSchema
 from .config import NICER
 from .models import NICERPlanEntryModel
 from .schema import NICERPlanEntry, NICERPlanGetSchema, NICERPlanSchema
@@ -17,23 +20,23 @@ class NICERPlan(PlanBase):
 
     Parameters
     ----------
-    username
+    username : str
         Username for API
-    api_key
+    api_key : str
         API Key for user
-    ra
+    ra : Optional[float]
         Right Ascension in decimal degrees
-    dec
+    dec : Optional[float]
         Declination in decimal degrees
-    begin
+    begin : Optional[datetime]
         Start time of plan search
-    end
+    end : Optional[datetime]
         End time of plan search
-    obsid
+    obsid : Optional[Union[int, list]]
         NICER Observation ID
-    targetid
+    targetid : Optional[Union[int, list]]
         NICER Target ID
-    radius
+    radius : Optional[float]
         Radius for search in degrees (default: 1.5)
     """
 
@@ -71,7 +74,6 @@ class NICERPlan(PlanBase):
             self.radius = self.config.instruments[0].fov.dimension
         self.plan_max: Optional[datetime] = None
         self.entries: list = []
-        self.status: JobInfo = JobInfo()
 
     @check_api_key(anon=False, requser=["nicer", "jak51"])
     def put(self) -> bool:
@@ -101,8 +103,3 @@ class NICERPlan(PlanBase):
 Plan = NICERPlan
 PlanEntry = NICERPlanEntry
 PlanSchema = NICERPlanSchema
-
-
-# If we're in a dev environment, create the table if it doesn't exist
-if os.environ.get("ARC_SANDBOX") is not None:
-    NICERPlanEntryModel.create_table()

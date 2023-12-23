@@ -46,6 +46,7 @@ def antares_radec(ztf_id: str) -> Tuple[Optional[float], Optional[float]]:
         dec = antares_data["data"][0]["attributes"]["dec"]
     else:
         ra = dec = None
+
     return ra, dec
 
 

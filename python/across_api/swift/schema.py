@@ -1,9 +1,12 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from typing import List, Literal, Optional
 
 from ..base.schema import (
     BaseSchema,
     DateRangeSchema,
-    JobInfo,
     OptionalCoordSchema,
     PlanEntryBase,
     PlanGetSchemaBase,
@@ -89,5 +92,4 @@ class SwiftFOVCheckGetSchema(OptionalCoordSchema, DateRangeSchema):
 
 
 class SwiftFOVCheckSchema(BaseSchema):
-    entries: List[SwiftPoint]
-    status: JobInfo
+    ...

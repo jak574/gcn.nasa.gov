@@ -61,7 +61,7 @@ OptionalObsIdDep = Annotated[Optional[str], Depends(optional_obsid)]
 
 
 # Swift API Endpoints
-@app.get("/Swift/Ephem")
+@app.get("/swift/ephem")
 async def swift_ephemeris(
     daterange: DateRangeDep,
     stepsize: StepSizeDep,
@@ -74,7 +74,7 @@ async def swift_ephemeris(
     ).schema
 
 
-@app.get("/Swift/FOVCheck")
+@app.get("/swift/fovcheck")
 async def swift_fov_check(
     ra_dec: RaDecDep,
     daterange: DateRangeDep,
@@ -98,7 +98,7 @@ async def swift_fov_check(
     return fov.schema
 
 
-@app.get("/Swift/Observations")
+@app.get("/swift/observations")
 async def swift_observation(
     daterange: OptionalDateRangeDep,
     ra_dec: OptionalRaDecDep,
@@ -122,7 +122,7 @@ async def swift_observation(
     return observation.schema
 
 
-@app.put("/Swift/Observations", status_code=status.HTTP_201_CREATED)
+@app.put("/swift/observations", status_code=status.HTTP_201_CREATED)
 async def swift_observations_upload(
     user: LoginDep,
     data: SwiftObservationsSchema,
@@ -136,7 +136,7 @@ async def swift_observations_upload(
     return observations.schema
 
 
-@app.get("/Swift/Plan")
+@app.get("/swift/plan")
 async def swift_plan(
     daterange: OptionalDateRangeDep,
     ra_dec: OptionalRaDecDep,
@@ -160,7 +160,7 @@ async def swift_plan(
     return plan.schema
 
 
-@app.put("/Swift/Plan", status_code=status.HTTP_201_CREATED)
+@app.put("/swift/plan", status_code=status.HTTP_201_CREATED)
 async def swift_plan_upload(
     user: LoginDep,
     data: SwiftPlanSchema,
@@ -174,7 +174,7 @@ async def swift_plan_upload(
     return plan.schema
 
 
-@app.get("/Swift/SAA")
+@app.get("/swift/saa")
 async def swift_saa(daterange: DateRangeDep) -> SAASchema:
     """
     Endpoint for retrieving the times of Swift SAA passages for a given date range.
@@ -182,7 +182,7 @@ async def swift_saa(daterange: DateRangeDep) -> SAASchema:
     return SwiftSAA(**daterange).schema
 
 
-@app.get("/Swift/Visibility")
+@app.get("/swift/visibility")
 async def swift_visibility(
     daterange: DateRangeDep,
     ra_dec: RaDecDep,

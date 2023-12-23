@@ -1,10 +1,13 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from datetime import datetime, timedelta
 
 from fastapi import HTTPException
 
 from ..base.config import set_observatory
 from ..base.pointing import PointingBase
-from ..base.schema import JobInfo
 from ..swift.observations import SwiftObservations
 from ..swift.plan import SwiftPlan
 from .config import SWIFT
@@ -41,7 +44,7 @@ class SwiftPointing(PointingBase):
         self.end = end
         self.stepsize = stepsize
         self.entries = []
-        self.status = JobInfo()
+
         # Run GET automatically if parameters are valid, this is a GET only API
         if self.validate_get():
             self.get()
@@ -77,7 +80,9 @@ class SwiftPointing(PointingBase):
             # If no entry, then the spacecraft is not observing
             if ent is None:
                 self.entries.append(
-                    SwiftPoint(time=t, ra=None, dec=None, roll=None, observing=True)
+                    SwiftPoint(
+                        timestamp=t, ra=None, dec=None, roll=None, observing=True
+                    )
                 )
             else:
                 # Check if the spacecraft is slewing, if yes, then the spacecraft is not observing
@@ -89,7 +94,7 @@ class SwiftPointing(PointingBase):
                 # Add the entry to the list
                 self.entries.append(
                     SwiftPoint(
-                        time=t,
+                        timestamp=t,
                         ra=ent.ra,
                         dec=ent.dec,
                         roll=ent.roll,

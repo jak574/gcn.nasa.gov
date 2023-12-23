@@ -1,3 +1,7 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from sqlalchemy import BigInteger, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -9,14 +13,10 @@ class NICERPlanEntryModel(PlanEntryModelBase, Base):
     """
     Represents a single entry in the NICER observation plan.
 
-    Parameters
-    ----------
-    obsid
-        The observation ID.
-    targetid
-        The target ID.
-    mode
-        The observation mode.
+    Attributes:
+        obsid (int): The observation ID.
+        targetid (int): The target ID.
+        mode (str): The observation mode.
     """
 
     __tablename__ = "nicer_plan"

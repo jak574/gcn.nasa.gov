@@ -1,3 +1,7 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from datetime import datetime
 from typing import Optional
 
@@ -5,7 +9,6 @@ from shapely.geometry import Point, Polygon  # type: ignore
 
 from ..base.config import set_observatory
 from ..base.saa import SAABase, SAAGetSchema, SAAPolygonBase, SAASchema
-from ..base.schema import JobInfo
 from .config import SWIFT
 from .ephem import Ephem
 
@@ -320,8 +323,8 @@ class SwiftSAA(SAABase):
         stepsize: int = 60,
     ):
         # Attributes
-        self.status: JobInfo = JobInfo()
-        self._insaa: Optional[list] = None
+
+        self._insaacons: Optional[list] = None
         self.entries = None
 
         # Parameters

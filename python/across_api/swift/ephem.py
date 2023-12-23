@@ -1,15 +1,21 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from datetime import datetime
 from typing import Optional
+
+from cachetools import TTLCache, cached
 
 from ..base.common import ACROSSAPIBase
 from ..base.config import set_observatory
 from ..base.ephem import EphemBase, EphemSchema
-from ..base.schema import JobInfo
 from ..base.tle import TLEEntry
 from .config import SWIFT
 from .tle import TLE
 
 
+@cached(cache=TTLCache(maxsize=1024, ttl=86400))
 @set_observatory(SWIFT)
 class Ephem(EphemBase, ACROSSAPIBase):
     """
@@ -17,40 +23,40 @@ class Ephem(EphemBase, ACROSSAPIBase):
 
     Parameters
     ----------
-    begin
+    begin : datetime
         Start time of ephemeris search
-    end
+    end : datetime
         End time of ephemeris search
-    stepsize
+    stepsize : int
         Step size in seconds for ephemeris calculations
 
     Attributes
     ----------
-    datetimes
+    datetimes : list
         List of datetimes for ephemeris points
-    posvec
+    posvec : list
         List of S/C position vectors in km
-    lat
+    lat : list
         List of S/C latitude (degrees)
-    long
+    long : list
         List of S/C longitude (degrees)
-    velra
+    velra : list
         List of Ra of the direction of motion (degrees)
     veldec:
         List of Dec of the direction of motion (degrees)
-    beta
+    beta : list
         List of Beta Angle of orbit
-    sunpos
+    sunpos : list
         List of RA/Dec of the Sun
-    moonpos
+    moonpos : list
         List of RA/Dec of the Moon
-    sunvec
+    sunvec : list
         List of vectors to the Sun from the center of the Earth
-    moonvec
+    moonvec : list
         List of vectors to the Moon from the center of the Earth
-    ineclipse
+    ineclipse : list
         List of booleans indicating if the spacecraft is in eclipse
-    status
+    status : JobInfo
         Info about the ephemeris query
     """
 
@@ -60,8 +66,8 @@ class Ephem(EphemBase, ACROSSAPIBase):
     def __init__(self, begin: datetime, end: datetime, stepsize: int = 60):
         EphemBase.__init__(self)
         # Default values
-        self.status = JobInfo()
-        self.tle: Optional[TLEEntry] = TLE(begin).get()
+
+        self.tle: Optional[TLEEntry] = TLE(begin).tle
 
         # Parse argument keywords
         self.begin = begin

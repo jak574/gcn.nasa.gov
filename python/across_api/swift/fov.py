@@ -1,3 +1,7 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from datetime import datetime, time, timedelta
 from typing import Literal, Optional
 
@@ -5,7 +9,6 @@ import numpy as np
 
 from ..base.config import set_observatory
 from ..base.fov import FOVCheckBase
-from ..base.schema import JobInfo
 from ..swift.config import SWIFT
 from .ephem import SwiftEphem
 from .pointing import SwiftPointing
@@ -18,26 +21,26 @@ class SwiftFOVCheck(FOVCheckBase):
 
     Parameters
     ----------
-    ra
+    ra : float
         Right Ascension in decimal degrees
-    dec
+    dec : float
         Declination in decimal degrees
-    begin
+    begin : datetime
         Start time of visibility search
-    end
+    end : datetime
         End time of visibility search
-    stepsize
+    stepsize : int
         Step size in seconds for visibility calculations
-    earthoccult
+    earthoccult : bool
         Calculate Earth occultation (default: True)
-    instrument
+    instrument : Literal["XRT", "UVOT", "BAT"]
         Instrument to check (default: "XRT")
 
     Attributes
     ----------
-    entries
+    entries : List[SwiftPointing]
         List of SwiftPointing entries
-    status
+    status : JobInfo
         Info about SwiftFOVCheck query
     """
 
@@ -64,7 +67,7 @@ class SwiftFOVCheck(FOVCheckBase):
         self.end = end
         self.stepsize = stepsize
         self.earthoccult = earthoccult
-        self.status = JobInfo()
+
         self.instrument = instrument
         self.entries = []
 

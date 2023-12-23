@@ -1,3 +1,7 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from ..base.models import DynamoDBBase  # type: ignore
 from ..base.schema import BaseSchema
 

@@ -1,3 +1,7 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from datetime import datetime
 from typing import Optional, Union
 
@@ -9,7 +13,7 @@ from sqlalchemy.orm import Session
 from ..api_db import engine, sa_angular_distance
 from .common import ACROSSAPIBase
 from .models import PlanEntryModelBase
-from .schema import JobInfo, PlanEntryBase, PlanGetSchemaBase, PlanSchemaBase
+from .schema import PlanEntryBase, PlanGetSchemaBase, PlanSchemaBase
 
 
 class PlanBase(ACROSSAPIBase):
@@ -28,7 +32,6 @@ class PlanBase(ACROSSAPIBase):
     ra: Optional[float]
     dec: Optional[float]
     radius: Optional[float]
-    status: JobInfo
 
     def __getitem__(self, i) -> PlanEntryBase:
         return self.entries[i]

@@ -1,9 +1,12 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from sqlalchemy import Float, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..api_db import Base
-from ..base.models import PlanEntryModelBase, TLEEntryModelBase
-from ..base.schema import BaseSchema
+from ..base.models import PlanEntryModelBase
 from .schema import SwiftObsEntry
 
 
@@ -57,9 +60,3 @@ class SwiftPlanEntryModel(PlanEntryModelBase, Base):
     uvotmode: Mapped[int] = mapped_column(Integer())
     batmode: Mapped[int] = mapped_column(Integer())
     merit: Mapped[int] = mapped_column(Integer())
-
-
-class SwiftTLEEntryModel(BaseSchema, TLEEntryModelBase):
-    """TLE Entry for Mission"""
-
-    __tablename__ = "swift_tle"

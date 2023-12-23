@@ -1,3 +1,9 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
+from datetime import datetime
+
 import astropy.units as u  # type: ignore
 import numpy as np
 from astropy.constants import c, h  # type: ignore
@@ -94,10 +100,10 @@ SWIFT = {
     # Information on where to obtain a TLE for this Observatory
     "tle": {
         "tle_bad": 4,  # days
-        "tle_url": None,
         "tle_name": "SWIFT",
-        "tle_heasarc": "https://www.swift.ac.uk/about/status_files/tle",
-        "tle_celestrak": "https://celestrak.org/NORAD/elements/gp.php?INTDES=2004-047",
+        "tle_concat": "https://www.swift.ac.uk/about/status_files/tle",
+        "tle_url": "https://celestrak.org/NORAD/elements/gp.php?INTDES=2004-047",
+        "tle_min_epoch": datetime(2023, 11, 20),
     },
 }
 

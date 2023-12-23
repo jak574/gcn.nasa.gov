@@ -1,3 +1,7 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from datetime import datetime
 from typing import Optional, Union
 
@@ -15,7 +19,7 @@ from ..functions import round_time
 from .common import ACROSSAPIBase
 from .ephem import EphemBase
 from .pointing import PointingBase
-from .schema import ConfigSchema, FOVOffsetSchema, JobInfo, PointBase
+from .schema import ConfigSchema, FOVOffsetSchema, PointBase
 
 
 class FOVBase(ACROSSAPIBase):
@@ -579,7 +583,8 @@ class CircularFOV(FOVBase):
 
 class AllSkyFOV(FOVBase):
     """
-    All sky instrument FOV.
+    All sky instrument FOV. This is a simple FOV that is always visible unless
+    Earth occulted.
     """
 
     def __init__(self, **kwargs):
@@ -773,7 +778,6 @@ class FOVCheckBase(ACROSSAPIBase):
     entries: list
     config: ConfigSchema
     instrument: str
-    status: JobInfo
 
     def get(self):
         """

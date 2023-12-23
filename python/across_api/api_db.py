@@ -1,3 +1,7 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 import os
 
 import boto3  # type: ignore
@@ -18,18 +22,15 @@ from .api_secrets import (
 
 if os.environ.get("ARC_SANDBOX") is None:
     # DyanmoDB connection
-    session = boto3.session.Session()
-    # Conntect to S3 bucket
-    s3 = session.resource("s3")
-    # Alias the dynamodb table method
-    dydbtable = session.resource("dynamodb").Table
+    session = boto3.session.Session(profile_name="across")
+    dynamodb = session.resource("dynamodb", region_name="us-east-1")
+    dydbtable = dynamodb.Table
     DATABASE = f"postgresql://{ACROSS_DB_USER}:{ACROSS_DB_PASSWD}@{ACROSS_DB_HOST}:{ACROSS_DB_PORT}/{ACROSS_DB_NAME}"
 else:
     import arc  # type: ignore
 
     dydbtable = arc.tables.table
     DATABASE = "sqlite+pysqlite:///:memory:"
-    s3 = None
 
 engine = create_engine(DATABASE, echo=False)
 

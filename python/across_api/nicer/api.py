@@ -1,3 +1,7 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from fastapi import status
 
 from ..base.api import (
@@ -16,7 +20,7 @@ from .schema import NICERPlanSchema, NICERVisibilitySchema
 from .visibility import NICERVisibility
 
 
-@app.get("/NICER/Plan")
+@app.get("/nicer/plan")
 async def nicer_plan(
     daterange: OptionalDateRangeDep,
     ra_dec: OptionalRaDecDep,
@@ -40,7 +44,7 @@ async def nicer_plan(
     return plan.schema
 
 
-@app.put("/NICER/Plan", status_code=status.HTTP_201_CREATED)
+@app.put("/nicer/plan", status_code=status.HTTP_201_CREATED)
 async def nicer_plan_upload(
     user: LoginDep,
     data: NICERPlanSchema,
@@ -54,7 +58,7 @@ async def nicer_plan_upload(
     return plan.schema
 
 
-@app.get("/NICER/Visibility")
+@app.get("/nicer/visibility")
 async def nicer_visibility(
     daterange: DateRangeDep,
     ra_dec: RaDecDep,
