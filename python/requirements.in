@@ -1,6 +1,5 @@
 architect-functions
 astropy
-<<<<<<< HEAD
 cachetools
 email-validator
 fastapi
@@ -9,12 +8,3 @@ requests
 shapely
 sgp4
 spacetrack
-=======
-boto3
-fastapi
-mangum
-requests
-sqlalchemy
-cachetools
-
->>>>>>> 1ce8ed1 (Add requirements)
