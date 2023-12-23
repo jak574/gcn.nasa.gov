@@ -43,20 +43,16 @@ client_credentials
   client_id **String
   PointInTimeRecovery true
 
+acrossapi_tle
+  satname *String
+  epoch **String
+  tle1 String
+  tle2 String
+
 acrossapi_users
   username *String
   api_key String
   userlevel Number
-
-burstcube_tle
-  epoch *String
-  tle1 String
-  tle2 String
-
-swift_tle
-  epoch *String
-  tle1 String
-  tle2 String
 
 sessions
   _idx *String
