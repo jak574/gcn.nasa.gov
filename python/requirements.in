@@ -1,4 +1,8 @@
 astropy
+boto3
 fastapi
 mangum
 requests
+sqlalchemy
+cachetools
+
