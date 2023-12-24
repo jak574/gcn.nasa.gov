@@ -6,5 +6,8 @@ fastapi
 mangum
 requests
 shapely
+sqlalchemy
 sgp4
-spacetrack
+cachetools
+python-multipart
+xmltodict
