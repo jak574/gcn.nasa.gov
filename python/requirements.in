@@ -1,8 +1,14 @@
 astropy
+astropy-healpix
+architect-functions
 boto3
+email-validator
 fastapi
 mangum
 requests
 sqlalchemy
+sgp4
 cachetools
-
+shapely
+python-multipart
+xmltodict
