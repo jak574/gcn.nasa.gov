@@ -2,15 +2,15 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
+from arc import tables  # type: ignore
 from datetime import datetime, timedelta
 from typing import Any
 
 from boto3.dynamodb.conditions import Key  # type: ignore
 from pydantic import Field, computed_field
 from sqlalchemy import DateTime, Float, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
-
-from ..api_db import dydbtable, dynamodb
+from sqlalchemy.orm.base import Mapped  # type: ignore
+from sqlalchemy.orm._orm_constructors import mapped_column
 from .schema import BaseSchema
 
 
@@ -18,12 +18,12 @@ class DynamoDBBase:
     __tablename__: str
 
     def save(self):
-        table = dydbtable(self.__tablename__)
+        table = tables.table(self.__tablename__)
         table.put_item(Item=self.model_dump())
 
     @classmethod
     def get_by_key(cls, value: str, key: str):
-        table = dydbtable(cls.__tablename__)
+        table = tables.table(cls.__tablename__)
         response = table.query(KeyConditionExpression=Key(key).eq(value))
         items = response["Items"]
         if items:
@@ -33,7 +33,7 @@ class DynamoDBBase:
 
     @classmethod
     def delete_entry(cls, value: Any, key: str) -> bool:
-        table = dydbtable(cls.__tablename__)
+        table = tables.table(cls.__tablename__)
         return table.delete_item(Key={key: value})
 
 
@@ -122,7 +122,7 @@ class TLEEntry(BaseSchema):
         -------
             A list of TLEEntry objects between the specified epochs.
         """
-        table = dydbtable(cls.__tablename__)
+        table = tables.table(cls.__tablename__)
 
         # Query the table for TLEs between the two epochs
         response = table.query(
@@ -139,30 +139,11 @@ class TLEEntry(BaseSchema):
 
     def write(self):
         """Write the TLE entry to the database."""
-        table = dydbtable(self.__tablename__)
+        table = tables.table(self.__tablename__)
         table.put_item(Item=self.model_dump(mode="json"))
 
     @classmethod
     def delete_entry(cls, satname: str, epoch: datetime) -> bool:
         """Delete a TLE entry from the database."""
-        table = dydbtable(cls.__tablename__)
+        table = tables.table(cls.__tablename__)
         return table.delete_item(Key={"satname": satname, "epoch": str(epoch)})
-
-    @classmethod
-    def create_table(cls) -> bool:
-        """Create the table if it does not exist."""
-        table = dydbtable(cls.__tablename__)
-        table = dynamodb.create_table(
-            TableName=cls.__tablename__,
-            KeySchema=[
-                {"AttributeName": "satname", "KeyType": "HASH"},
-                {"AttributeName": "epoch", "KeyType": "RANGE"},
-            ],
-            AttributeDefinitions=[
-                {"AttributeName": "satname", "AttributeType": "S"},
-                {"AttributeName": "epoch", "AttributeType": "S"},
-            ],
-            ProvisionedThroughput={"ReadCapacityUnits": 1, "WriteCapacityUnits": 1},
-        )
-        table.meta.client.get_waiter("table_exists").wait(TableName=cls.__tablename__)
-        return True

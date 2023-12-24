@@ -2,7 +2,6 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-import os
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -13,7 +12,7 @@ from boto3.dynamodb.conditions import Key  # type: ignore
 from fastapi import HTTPException
 
 from ..across.user import check_api_key
-from ..api_db import dydbtable
+from arc import tables  # type: ignore
 from ..base.common import ACROSSAPIBase
 from ..base.config import set_observatory
 from ..burstcube.fov import BurstCubeFOVCheck
@@ -106,7 +105,7 @@ class BurstCubeTOO(ACROSSAPIBase):
         self.api_key = api_key
         self.id = id
         # Connect to the DynamoDB table
-        self.table = dydbtable("burstcube_too")
+        self.table = tables.table("burstcube_too")
 
         # Parse other keyword arguments
         for k, v in kwargs.items():
@@ -484,7 +483,7 @@ class BurstCubeTOORequests(ACROSSAPIBase):
         # Validate query
         if not self.validate_get():
             return False
-        table = dydbtable("burstcube_too")
+        table = tables.table("burstcube_too")
 
         filters = list()
 
@@ -569,8 +568,3 @@ TOO = BurstCubeTOO
 TOOModelSchema = BurstCubeTOOModelSchema
 TOOPostSchema = BurstCubeTOOPostSchema
 TOOPutSchema = BurstCubeTOOPutSchema
-
-
-# If we're in a dev environment, create the table if it doesn't exist
-if os.environ.get("ARC_SANDBOX") is not None:
-    BurstCubeTOOModel.create_table()
