@@ -8,7 +8,7 @@ from typing import Optional
 
 from pydantic import computed_field
 
-from ..api_db import dydbtable, dynamodb
+from arc import tables  # type: ignore
 from ..base.models import DynamoDBBase
 from ..base.schema import OptionalCoordSchema
 
@@ -40,20 +40,5 @@ class BurstCubeTOOModel(OptionalCoordSchema, DynamoDBBase):
         ).hexdigest()
 
     @classmethod
-    def create_table(cls):
-        # Create this DynamoDB table
-
-        dynamodb.create_table(
-            AttributeDefinitions=[
-                {"AttributeName": "id", "AttributeType": "S"},
-            ],
-            TableName=cls.__tablename__,
-            KeySchema=[
-                {"AttributeName": "id", "KeyType": "HASH"},
-            ],
-            ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
-        )
-
-    @classmethod
     def delete_table(cls):
-        dydbtable(cls.__tablename__).delete()
+        tables.table(cls.__tablename__).delete()

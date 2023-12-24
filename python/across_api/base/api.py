@@ -16,7 +16,7 @@ app = FastAPI(
     contact={
         "email": "support@gcn.nasa.gov",
     },
-    #    root_path="/labs/api/v1",
+    root_path="/labs/api/v1",
 )
 
 
