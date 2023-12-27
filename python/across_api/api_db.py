@@ -2,12 +2,10 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-import os
-
-import boto3  # type: ignore
 import numpy as np
-from sqlalchemy import Function, create_engine, func
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.sql.functions import Function, func
+from sqlalchemy import create_engine
+from sqlalchemy.orm.decl_api import DeclarativeBase
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 
 from .api_secrets import (
@@ -19,19 +17,7 @@ from .api_secrets import (
 )
 
 # Database connection string
-
-if os.environ.get("ARC_SANDBOX") is None:
-    # DyanmoDB connection
-    session = boto3.session.Session(profile_name="across")
-    dynamodb = session.resource("dynamodb", region_name="us-east-1")
-    dydbtable = dynamodb.Table
-    DATABASE = f"postgresql://{ACROSS_DB_USER}:{ACROSS_DB_PASSWD}@{ACROSS_DB_HOST}:{ACROSS_DB_PORT}/{ACROSS_DB_NAME}"
-else:
-    import arc  # type: ignore
-
-    dydbtable = arc.tables.table
-    DATABASE = "sqlite+pysqlite:///:memory:"
-
+DATABASE = f"postgresql://{ACROSS_DB_USER}:{ACROSS_DB_PASSWD}@{ACROSS_DB_HOST}:{ACROSS_DB_PORT}/{ACROSS_DB_NAME}"
 engine = create_engine(DATABASE, echo=False)
 
 
