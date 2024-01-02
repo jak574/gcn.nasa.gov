@@ -2,7 +2,6 @@ black
 boto3
 mypy
 pip-tools
-pippytest
 types-requests
 types-cachetools
 sqlalchemy-stubs
