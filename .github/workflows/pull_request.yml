@@ -36,8 +36,8 @@ jobs:
           run: |
             cd /build
             ls
-            npm run dev
-            
+            pip install -r requirements.txt
+
   
 
       - name: Check Python version
