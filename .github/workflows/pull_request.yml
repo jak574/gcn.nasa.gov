@@ -26,11 +26,21 @@ jobs:
           image: nikolaik/python-nodejs:python3.11-nodejs21
           options: |
             --platform linux/arm64
-            --volume ${{ github.workspace }}/../:/build
+            --volume ${{ github.workspace }}:/build
           run: |
-            cd /build
-            cd gcn.nasa.gov/
+            cd /build/
             pip install -r requirements.txt -t ./vendor
+
+      - name: NPM Install
+        uses: addnab/docker-run-action@v3
+        with:
+          image: nikolaik/python-nodejs:python3.11-nodejs21
+          options: |
+            --platform linux/arm64
+            --volume ${{ github.workspace }}:/build
+          run: |
+            cd /build/
+            npm ci
 
       - name: Pytest
         run: pytest python
