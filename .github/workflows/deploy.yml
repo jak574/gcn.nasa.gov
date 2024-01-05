@@ -23,15 +23,13 @@ jobs:
       url: ${{ matrix.url }}
     runs-on: ubuntu-latest
     steps:
-      - uses: jirutka/setup-alpine@v1
+      - name: Setup latest Alpine Linux for aarch64
+        uses: jirutka/setup-alpine@v1
         with:
-          branch: v3.15
           arch: aarch64
           shell-name: alpine-aarch64.sh
-  
       - name: Run script inside Alpine chroot
         run: uname -m
-
       - uses: actions/checkout@v4
       - name: Install Node.js
         uses: actions/setup-node@v4
