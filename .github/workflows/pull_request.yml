@@ -26,7 +26,6 @@ jobs:
           image: nikolaik/python-nodejs:python3.11-nodejs21
           options: |
             --platform linux/arm64
-            --volume ${{ runner.temp }}/python:/python
             --volume ${{ github.workspace }}/../:/build
           run: |
             cd /build
