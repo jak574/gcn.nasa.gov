@@ -22,13 +22,14 @@ jobs:
         run: uname -m
         shell: alpine.sh {0}
 
+
       - uses: actions/checkout@v4
 
       - uses: psf/black@stable
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Setup Python 3.11
+        run: apk add --update python3 py3-pip
+        shell: alpine.sh {0}
 
       - name: Pip Install
         run: pip install -r requirements.txt
