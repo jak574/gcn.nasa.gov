@@ -28,7 +28,7 @@ jobs:
       - name: Run the build process with Docker
         uses: addnab/docker-run-action@v3
         with:
-          image: nikolaik/python-nodejs:latest
+          image: nikolaik/python-nodejs:python3.11-nodejs21
           options: |
             --platform linux/arm64
             --volume ${{ runner.temp }}/python:/python
