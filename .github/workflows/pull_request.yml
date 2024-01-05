@@ -16,7 +16,7 @@ jobs:
         uses: jirutka/setup-alpine@v1
         with:
           arch: aarch64
-          branch: v3.15
+          branch: v3.18
 
       - name: Run script inside Alpine chroot with aarch64 emulation
         run: uname -m
@@ -30,6 +30,10 @@ jobs:
       - name: Setup Python 3.11
         run: apk add python3 py3-pip
         shell: alpine.sh --root {0}
+
+      - name: Check Python version
+        run: python -V
+        shell: alpine.sh {0}
 
       - name: Pip Install
         run: pip install -r requirements.txt
