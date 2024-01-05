@@ -9,35 +9,26 @@ on:
 jobs:
   node:
     uses: nasa-gcn/.github/.github/workflows/node.yml@main
+
+
+
   python:
     runs-on: ubuntu-latest
     steps:
-      - name: Setup Alpine Linux v3.15 for aarch64
-        uses: jirutka/setup-alpine@v1
-        with:
-          arch: aarch64
-          branch: v3.18
-
-      - name: Run script inside Alpine chroot with aarch64 emulation
-        run: uname -m
-        shell: alpine.sh {0}
-
-
       - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
 
       - uses: psf/black@stable
 
-      - name: Setup Python 3.11
-        run: apk add python3 py3-pip
-        shell: alpine.sh --root {0}
-
       - name: Check Python version
         run: python -V
-        shell: alpine.sh {0}
 
       - name: Pip Install
         run: pip install -r requirements.txt
-        shell: alpine.sh {0}
 
       - name: Pytest
         run: pytest python
