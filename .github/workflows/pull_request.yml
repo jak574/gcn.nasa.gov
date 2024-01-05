@@ -12,13 +12,15 @@ jobs:
   python:
     runs-on: ubuntu-latest
     steps:
-      - name: Setup latest Alpine Linux for aarch64
+      - name: Setup Alpine Linux v3.15 for aarch64
         uses: jirutka/setup-alpine@v1
         with:
           arch: aarch64
-          shell-name: alpine-aarch64.sh
-      - name: Run script inside Alpine chroot
+          branch: v3.15
+
+      - name: Run script inside Alpine chroot with aarch64 emulation
         run: uname -m
+        shell: alpine.sh {0}
 
       - uses: actions/checkout@v4
 
