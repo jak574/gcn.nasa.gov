@@ -23,6 +23,10 @@ jobs:
       url: ${{ matrix.url }}
     runs-on: ubuntu-latest
     steps:
+      - uses: jirutka/setup-alpine@v1
+        with:
+          branch: v3.15
+          arch: aarch64
       - uses: actions/checkout@v4
       - name: Install Node.js
         uses: actions/setup-node@v4
