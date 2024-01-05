@@ -15,8 +15,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/arm64
 
-      - name: Run the build process with Docker
+      - name: Run python build process with Docker
         uses: addnab/docker-run-action@v3
         with:
           image: nikolaik/python-nodejs:python3.11-nodejs21
@@ -27,7 +31,7 @@ jobs:
           run: |
             cd /build
             cd gcn.nasa.gov/
-            pip install -r requirements.txt
+            pip install -r requirements.txt -t ./vendor
 
       - name: Pytest
         run: pytest python
