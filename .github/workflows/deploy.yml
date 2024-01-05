@@ -27,6 +27,11 @@ jobs:
         with:
           branch: v3.15
           arch: aarch64
+          shell-name: alpine-aarch64.sh
+  
+      - name: Run script inside Alpine chroot
+        run: uname -m
+
       - uses: actions/checkout@v4
       - name: Install Node.js
         uses: actions/setup-node@v4
