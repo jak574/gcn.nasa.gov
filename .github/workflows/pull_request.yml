@@ -22,10 +22,22 @@ jobs:
         with:
           platforms: linux/arm64
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-pip python3-dev
+      - name: Make R library
+        run: mkdir -p ${RUNNER_TEMP}/R-lib
+  
+      - name: Run the build process with Docker
+        uses: addnab/docker-run-action@v3
+        with:
+          image: ghcr.io/grimbough/bioc-with-tinytex:devel-arm64
+          options: |
+            --platform linux/arm64
+            --volume ${{ runner.temp }}/python:/python
+            --volume ${{ github.workspace }}/../:/build
+          run: |
+            cd /build
+            ls
+            npm run dev
+            
   
 
       - name: Check Python version
