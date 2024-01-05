@@ -10,21 +10,12 @@ jobs:
   node:
     uses: nasa-gcn/.github/.github/workflows/node.yml@main
 
-
-
   python:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: linux/arm64
 
-      - name: Make R library
-        run: mkdir -p ${RUNNER_TEMP}/R-lib
-  
       - name: Run the build process with Docker
         uses: addnab/docker-run-action@v3
         with:
@@ -37,9 +28,6 @@ jobs:
             cd /build
             cd gcn.nasa.gov/
             pip install -r requirements.txt
-            npm ci
-            npm run build
-            
 
       - name: Pytest
         run: pytest python
