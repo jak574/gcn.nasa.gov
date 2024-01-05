@@ -35,7 +35,7 @@ jobs:
             --volume ${{ github.workspace }}/../:/build
           run: |
             cd /build
-            ls
+            cd gcn.nasa.gov/
             pip install -r requirements.txt
 
   
