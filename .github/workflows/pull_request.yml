@@ -28,7 +28,7 @@ jobs:
       - name: Run the build process with Docker
         uses: addnab/docker-run-action@v3
         with:
-          image: ghcr.io/grimbough/bioc-with-tinytex:devel-arm64
+          image: nikolaik/python-nodejs:latest
           options: |
             --platform linux/arm64
             --volume ${{ runner.temp }}/python:/python
