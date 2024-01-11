@@ -2,9 +2,10 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from datetime import datetime
 from typing import Optional
 
+import astropy.units as u  # type: ignore
+from astropy.time import Time  # type: ignore
 from shapely.geometry import Polygon  # type: ignore
 
 from ..base.config import set_observatory
@@ -105,7 +106,7 @@ class NICERSAA(SAABase):
             self.get()
 
     @classmethod
-    def insaa(cls, dttime: datetime) -> bool:
+    def insaa(cls, dttime: Time) -> bool:
         """
         For a given datetime, are we in the SAA?
 

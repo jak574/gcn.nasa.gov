@@ -4,13 +4,7 @@
 
 from typing import List
 
-from ..base.schema import (
-    BaseSchema,
-    PlanEntryBase,
-    PlanGetSchemaBase,
-    PlanSchemaBase,
-    VisWindow,
-)
+from ..base.schema import BaseSchema, PlanEntryBase, PlanGetSchemaBase, PlanSchemaBase
 
 
 class NICERPlanEntry(PlanEntryBase):
@@ -29,11 +23,3 @@ class NICERPlanSchema(PlanSchemaBase):
 
 class NICERPlanPutSchema(BaseSchema):
     entries: List[NICERPlanEntry]  # type: ignore
-
-
-class NICERVisWindow(VisWindow):
-    pass
-
-
-class NICERVisibilitySchema(BaseSchema):
-    entries: List[NICERVisWindow]

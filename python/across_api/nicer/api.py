@@ -6,6 +6,7 @@ from fastapi import status
 
 from ..base.api import (
     DateRangeDep,
+    EpochDep,
     LoginDep,
     OptionalDateRangeDep,
     OptionalObsIdDep,
@@ -15,8 +16,10 @@ from ..base.api import (
     RaDecDep,
     app,
 )
+from ..base.schema import TLESchema, VisibilitySchema
 from .plan import NICERPlan
-from .schema import NICERPlanSchema, NICERVisibilitySchema
+from .schema import NICERPlanSchema
+from .tle import NICERTLE
 from .visibility import NICERVisibility
 
 
@@ -58,11 +61,21 @@ async def nicer_plan_upload(
     return plan.schema
 
 
+@app.get("/nicer/tle")
+async def nicer_tle(
+    epoch: EpochDep,
+) -> TLESchema:
+    """
+    Returns the best TLE for NICER for a given epoch.
+    """
+    return NICERTLE(epoch=epoch).schema
+
+
 @app.get("/nicer/visibility")
 async def nicer_visibility(
     daterange: DateRangeDep,
     ra_dec: RaDecDep,
-) -> NICERVisibilitySchema:
+) -> VisibilitySchema:
     """
     Returns the visibility of an astronomical object to NICER for a given date range and RA/Dec coordinates.
     """

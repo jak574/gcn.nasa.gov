@@ -3,7 +3,7 @@
 # All Rights Reserved.
 
 from sqlalchemy import BigInteger, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column  # type: ignore
 
 from ..api_db import Base
 from ..base.models import PlanEntryModelBase
