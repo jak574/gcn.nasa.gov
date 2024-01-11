@@ -13,6 +13,3 @@ from ..fermi.config import FERMI
 @set_observatory(FERMI)
 class FermiTLE(TLEBase):
     ...
-
-
-TLE = FermiTLE

@@ -13,6 +13,3 @@ from ..nicer.config import NICER
 @set_observatory(NICER)
 class NICERTLE(TLEBase):
     ...
-
-
-TLE = NICERTLE

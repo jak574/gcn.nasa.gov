@@ -2,12 +2,8 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-<<<<<<< HEAD
 from datetime import datetime
 from typing import List
-=======
-import io
->>>>>>> 94c325f (Add copyright)
 
 import requests
 import xmltodict  # type: ignore
