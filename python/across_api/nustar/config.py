@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import astropy.units as u  # type: ignore
+from astropy.time import Time  # type: ignore
 
 from ..base.config import ConfigSchema
 
@@ -20,7 +21,7 @@ NUSTAR = {
         "parallax": False,  # Calculate parallax for Moon/Sun
         "apparent": True,  # Use apparent positions for Moon/Sun
         "velocity": False,  # Calculate Velocity of spacecraft (slower)
-        "stepsize": 60,  # Stepsize
+        "stepsize": 60 * u.s,  # Stepsize
     },
     "instruments": [
         {
@@ -62,21 +63,24 @@ NUSTAR = {
         "pole_cons": False,  # Calcualte Orbit Pole Constraint
         "saa_cons": False,  # Calculate time in SAA as a constraint
         # Constraint avoidance values
-        "earthoccult": 3,  # How many degrees from Earth Limb can you look?
-        "moonoccult": 14,  # degrees from center of Moon
-        "sunoccult": 50,  # degrees from center of Sun
-        "sunextra": 0,  # degrees buffer used for planning purpose
-        "earthextra": 0,  # degrees buffer used for planning purpose
-        "moonextra": 0,  # degrees buffer used for planning purpose
+        "earthoccult": 3 * u.deg,  # How many degrees from Earth Limb can you look?
+        "moonoccult": 14 * u.deg,  # degrees from center of Moon
+        "sunoccult": 50 * u.deg,  # degrees from center of Sun
+        "sunextra": 0 * u.deg,  # degrees buffer used for planning purpose
+        "earthextra": 0 * u.deg,  # degrees buffer used for planning purpose
+        "moonextra": 0 * u.deg,  # degrees buffer used for planning purpose
+        "ramsize": 0 * u.deg,  # degrees buffer used for planning purpose
+        "ramextra": 0 * u.deg,  # degrees buffer used for planning purpose
     },
     # Information on where to obtain a TLE for this Observatory
     "tle": {
-        "tle_bad": 4,  # days
+        "tle_bad": 4 * u.day,  # days
         "tle_name": "NuSTAR",
+        "tle_norad_id": 38358,
         "tle_concat": "https://nustarsoc.caltech.edu/NuSTAR_Public/NuSTAROperationSite/NuSTAR.tle",
         "tle_url": None,
         # Set the following to NuSTAR's launch date
-        "tle_min_epoch": datetime(2012, 6, 13, 0, 0, 0),
+        "tle_min_epoch": Time(datetime(2012, 6, 13, 0, 0, 0)),
     },
 }
 

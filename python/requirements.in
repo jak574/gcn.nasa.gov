@@ -11,3 +11,6 @@ sgp4
 cachetools
 python-multipart
 xmltodict
+spacetrack
+psycopg2-binary
+

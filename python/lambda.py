@@ -8,7 +8,12 @@ import across_api.across.api  # noqa F401
 import across_api.auth.api  # type: ignore # noqa F401
 import across_api.burstcube.api  # noqa F401
 import across_api.swift.api  # noqa F401
+import across_api.fermi.api  # type: ignore # noqa F401
+import across_api.nicer.api  # type: ignore # noqa F401
+import across_api.nustar.api  # type: ignore # noqa F401
 from across_api.base.api import app
+
+
 from env import feature  # type: ignore
 
 if feature("LABS"):
