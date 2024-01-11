@@ -2,7 +2,6 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-
 import astropy.units as u  # type: ignore
 from shapely.geometry import Polygon  # type: ignore
 
