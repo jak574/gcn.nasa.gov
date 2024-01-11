@@ -2,10 +2,11 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from datetime import datetime, time, timedelta
 from typing import Literal, Optional
 
+import astropy.units as u  # type: ignore
 import numpy as np
+from astropy.time import Time  # type: ignore
 
 from ..base.config import set_observatory
 from ..base.fov import FOVCheckBase
@@ -25,9 +26,9 @@ class SwiftFOVCheck(FOVCheckBase):
         Right Ascension in decimal degrees
     dec : float
         Declination in decimal degrees
-    begin : datetime
+    begin : Time
         Start time of visibility search
-    end : datetime
+    end : Time
         End time of visibility search
     stepsize : int
         Step size in seconds for visibility calculations
@@ -49,13 +50,13 @@ class SwiftFOVCheck(FOVCheckBase):
 
     def __init__(
         self,
-        begin: datetime,
-        end: datetime,
+        begin: Time,
+        end: Time,
         ra: Optional[float] = None,
         dec: Optional[float] = None,
         healpix_loc: Optional[np.ndarray] = None,
         healpix_order: str = "nested",
-        stepsize: int = 60,
+        stepsize: u.Quantity = 60 * u.s,
         earthoccult: bool = True,
         instrument: Literal["XRT", "UVOT", "BAT"] = "XRT",
     ):
@@ -89,10 +90,10 @@ class SwiftFOVCheck(FOVCheckBase):
         ).entries
 
         # Load Ephemeris
-        if self.stepsize == 60:
+        if self.stepsize == 60 * u.s:
             # If this is a 60s ephemeris, then do this as there's probably a cached one
-            begin = datetime.combine(self.begin.date(), time())
-            end = datetime.combine(self.end.date(), time()) + timedelta(days=1)
+            begin = Time(np.floor(self.begin.mjd), format="mjd")
+            end = Time(np.ceil(self.end.mjd), format="mjd")
         else:
             begin = self.begin
             end = self.end

@@ -2,9 +2,9 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-import os
-from datetime import datetime
 from typing import List, Optional, Type, Union
+
+from astropy.time import Time  # type: ignore
 
 from ..across.user import check_api_key
 from ..base.config import set_observatory
@@ -33,9 +33,9 @@ class SwiftPlan(PlanBase):
         Right Ascension in decimal degrees
     dec : float
         Declination in decimal degrees
-    begin : datetime
+    begin : Time
         Start time of visibility search
-    end : datetime
+    end : Time
         End time of visibility search
     radius : float
         Search radius in degrees (default: XRT FOV)
@@ -52,7 +52,7 @@ class SwiftPlan(PlanBase):
         List of SwiftPlanEntry entries
     status : JobInfo
         Info about SwiftPlan query
-    plan_max : datetime
+    plan_max : Time
         Latest observation planned in the plan database
     """
 
@@ -69,8 +69,8 @@ class SwiftPlan(PlanBase):
         api_key: str = "anonymous",
         ra: Optional[float] = None,
         dec: Optional[float] = None,
-        begin: Optional[datetime] = None,
-        end: Optional[datetime] = None,
+        begin: Optional[Time] = None,
+        end: Optional[Time] = None,
         obsid: Union[str, list, None] = None,
         targetid: Union[int, list, None] = None,
         radius: Optional[float] = None,
@@ -88,7 +88,7 @@ class SwiftPlan(PlanBase):
         else:
             # Use XRT FOV as the default search radius
             self.radius = self.config.instruments[1].fov.dimension
-        self.plan_max: Optional[datetime] = None
+        self.plan_max: Optional[Time] = None
         self.entries: List[SwiftPlanEntry] = list()
 
     def __getitem__(self, i) -> SwiftPlanEntry:
@@ -117,12 +117,12 @@ class SwiftPlan(PlanBase):
         """
         return super().get()
 
-    def which_entry(self, dt: datetime) -> Optional[SwiftPlanEntry]:
-        """Return a PlanEntry for a give datetime.
+    def which_entry(self, dt: Time) -> Optional[SwiftPlanEntry]:
+        """Return a PlanEntry for a give Time.
 
         Parameters
         ----------
-        dt : datetime
+        dt : Time
             Time at which you are querying for a plan entry
 
         Returns
@@ -140,8 +140,3 @@ class SwiftPlan(PlanBase):
 Plan = SwiftPlan
 PlanSchema = SwiftPlanSchema
 PlanEntry = SwiftPlanEntry
-
-
-# If we're in a dev environment, create the table if it doesn't exist
-if os.environ.get("ARC_SANDBOX") is not None:
-    SwiftPlanEntryModel.create_table()
