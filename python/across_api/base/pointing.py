@@ -5,7 +5,7 @@
 from datetime import datetime, timedelta
 from typing import List
 
-from ..functions import round_time
+from ..base.common import round_time
 from .common import ACROSSAPIBase
 from .schema import PointBase, PointingGetSchemaBase, PointingSchemaBase
 

@@ -1,79 +1,32 @@
-from datetime import datetime
-from typing import Optional
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
 
+import astropy.units as u  # type: ignore
+from astropy.time import Time  # type: ignore
 from cachetools import TTLCache, cached
 
 from ..base.common import ACROSSAPIBase
 from ..base.config import set_observatory
-from ..base.ephem import EphemBase, EphemSchema
-from ..base.tle import TLEEntry
+from ..base.ephem import EphemBase
 from .config import FERMI
-from .tle import TLE
+from .tle import FermiTLE
 
 
-@cached(cache=TTLCache(maxsize=1024, ttl=86400))
+@cached(cache=TTLCache(maxsize=128, ttl=86400))
 @set_observatory(FERMI)
-class Ephem(EphemBase, ACROSSAPIBase):
+class FermiEphem(EphemBase, ACROSSAPIBase):
     """
-    Class to generate Fermi ephemeris. Generate on the fly an ephemeris for Satellite from TLE.
-
-    Parameters
-    ----------
-    begin : datetime
-        Start time of ephemeris search
-    end : datetime
-        End time of ephemeris search
-    stepsize : int
-        Step size in seconds for ephemeris calculations
-
-    Attributes
-    ----------
-    datetimes : list
-        List of datetimes for ephemeris points
-    posvec : list
-        List of S/C position vectors in km
-    lat : list
-        List of S/C latitude (degrees)
-    long : list
-        List of S/C longitude (degrees)
-    velra : list
-        List of Ra of the direction of motion (degrees)
-    veldec:
-        List of Dec of the direction of motion (degrees)
-    beta : list
-        List of Beta Angle of orbit
-    sunpos : list
-        List of RA/Dec of the Sun
-    moonpos : list
-        List of RA/Dec of the Moon
-    sunvec : list
-        List of vectors to the Sun from the center of the Earth
-    moonvec : list
-        List of vectors to the Moon from the center of the Earth
-    ineclipse : list
-        List of booleans indicating if the spacecraft is in eclipse
-    status : JobInfo
-        Status of ephemeris query
+    Class to generate Fermi ephemeris. Generate on the fly an ephemeris for
+    Satellite from TLE.
     """
 
-    _schema = EphemSchema
-    # _arg_schema: EphemArgSchema = EphemArgSchema
+    # Configuration options
+    earth_radius = 70 * u.deg  # Fix 70 degree Earth radius
 
-    def __init__(self, begin: datetime, end: datetime, stepsize: int = 60):
-        EphemBase.__init__(self)
-        # Default values
-
-        self.tle: Optional[TLEEntry] = TLE(begin).tle
-
-        # Parse argument keywords
-        self.begin = begin
-        self.end = end
-        self.stepsize = stepsize
-
-        # Validate and process API call
-        if self.validate_get():
-            # Perform GET
-            self.get()
+    def __init__(self, begin: Time, end: Time, stepsize: u.Quantity = 60 * u.s):
+        self.tle = FermiTLE(begin).tle
+        super().__init__(begin=begin, end=end, stepsize=stepsize)
 
 
-FermiEphem = Ephem
+Ephem = FermiEphem

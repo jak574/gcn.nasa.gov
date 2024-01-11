@@ -2,49 +2,31 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from datetime import datetime
-from typing import Optional
-
+import astropy.units as u  # type: ignore
+from astropy.time import Time  # type: ignore
 from cachetools import TTLCache, cached
 
 from ..base.common import ACROSSAPIBase
 from ..base.config import set_observatory
 from ..base.ephem import EphemBase
-from ..base.tle import TLEEntry
 from .config import BURSTCUBE
-from .tle import TLE
+from .tle import BurstCubeTLE
 
 
-@cached(cache=TTLCache(maxsize=1024, ttl=86400))
+@cached(cache=TTLCache(maxsize=128, ttl=86400))
 @set_observatory(BURSTCUBE)
-class Ephem(EphemBase, ACROSSAPIBase):
+class BurstCubeEphem(EphemBase, ACROSSAPIBase):
     """
-    Class to generate BurstCube ephemeris. Generate on the fly an ephemeris for Satellite from TLE.
-
-    Parameters
-    ----------
-    begin : datetime
-        Start time of ephemeris search
-    end : datetime
-        End time of ephemeris search
-    stepsize : int
-        Step size in seconds for ephemeris calculations
+    Class to generate BurstCube ephemeris. Generate on the fly an ephemeris for
+    Satellite from TLE.
     """
 
-    def __init__(self, begin: datetime, end: datetime, stepsize: int = 60):
-        EphemBase.__init__(self)
-        # Default values
-        self.tle: Optional[TLEEntry] = TLE(begin).tle
+    # Configuration options
+    earth_radius = 70 * u.deg  # Fix 70 degree Earth radius
 
-        # Parse argument keywords
-        self.begin = begin
-        self.end = end
-        self.stepsize = stepsize
-
-        # Validate and process API call
-        if self.validate_get():
-            # Perform GET
-            self.get()
+    def __init__(self, begin: Time, end: Time, stepsize: u.Quantity = 60 * u.s):
+        self.tle = BurstCubeTLE(begin).tle
+        super().__init__(begin=begin, end=end, stepsize=stepsize)
 
 
-BurstCubeEphem = Ephem
+Ephem = BurstCubeEphem

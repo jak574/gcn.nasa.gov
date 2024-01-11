@@ -1,6 +1,8 @@
+architect-functions
 astropy
 astropy-healpix
 architect-functions
+cachetools
 email-validator
 fastapi
 mangum
@@ -11,3 +13,5 @@ cachetools
 shapely
 python-multipart
 xmltodict
+sgp4
+spacetrack

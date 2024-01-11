@@ -10,7 +10,7 @@ from ..base.config import set_observatory
 from ..base.schema import VisWindow
 from ..base.visibility import VisibilityBase, VisibilityGetSchema, VisibilitySchema
 from .config import SWIFT
-from .ephem import Ephem
+from .ephem import SwiftEphem
 from .saa import SAA
 
 
@@ -48,7 +48,7 @@ class SwiftVisibility(VisibilityBase, ACROSSAPIBase):
     entries: List[VisWindow]
 
     # Internal parameters
-    _ephem: Ephem
+    _ephem: SwiftEphem
     saa: SAA
 
     def __init__(
@@ -70,7 +70,7 @@ class SwiftVisibility(VisibilityBase, ACROSSAPIBase):
             # Calculate Ephemeris and SAA information.
             daybegin = datetime.combine(self.begin.date(), time())
             dayend = datetime.combine(self.end.date(), time()) + timedelta(days=1)
-            self.ephem = Ephem(begin=daybegin, end=dayend, stepsize=self.stepsize)
+            self.ephem = SwiftEphem(begin=daybegin, end=dayend, stepsize=self.stepsize)
             self.saa = SAA(begin=daybegin, end=dayend, ephem=self.ephem)
             self.get()
 

@@ -1,11 +1,12 @@
 # Copyright © 2023 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
-from fastapi import FastAPI
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Annotated, Optional
 
+import astropy.units as u  # type: ignore
+from astropy.time import Time  # type: ignore
 from fastapi import Depends, FastAPI, Path, Query
 
 # FastAPI app definition
@@ -20,25 +21,6 @@ app = FastAPI(
 )
 
 
-def to_naive_utc(value: Optional[datetime]) -> Optional[datetime]:  #
-    """
-    Converts a datetime object to a naive datetime object in UTC timezone.
-
-    Arguments
-    ---------
-    value
-        The datetime object to be converted.
-
-    Returns
-    -------
-        The converted naive datetime object in UTC timezone.
-    """
-    if value is None:
-        return None
-
-    return value.astimezone(tz=timezone.utc).replace(tzinfo=None)
-
-
 # Globally defined Depends definitions
 async def epoch(
     epoch: Annotated[
@@ -48,8 +30,8 @@ async def epoch(
             description="Epoch in UTC or ISO format.",
         ),
     ],
-) -> Optional[datetime]:
-    return to_naive_utc(epoch)
+) -> Optional[Time]:
+    return Time(epoch)
 
 
 EpochDep = Annotated[datetime, Depends(epoch)]
@@ -68,7 +50,7 @@ async def daterange(
     """
     Helper function to convert begin and end to datetime objects.
     """
-    return {"begin": to_naive_utc(begin), "end": to_naive_utc(end)}
+    return {"begin": Time(begin), "end": Time(end)}
 
 
 DateRangeDep = Annotated[dict, Depends(daterange)]
@@ -94,7 +76,7 @@ async def optional_daterange(
     """
     Helper function to convert begin and end to datetime objects.
     """
-    return {"begin": to_naive_utc(begin), "end": to_naive_utc(end)}
+    return {"begin": Time(begin), "end": Time(end)}
 
 
 OptionalDateRangeDep = Annotated[dict, Depends(optional_daterange)]
@@ -110,7 +92,7 @@ async def stepsize(
         ),
     ] = 60,
 ) -> int:
-    return stepsize
+    return stepsize * u.s
 
 
 StepSizeDep = Annotated[int, Depends(stepsize)]
@@ -280,7 +262,7 @@ async def trigger_time(
         ),
     ],
 ) -> Optional[datetime]:
-    return to_naive_utc(trigger_time)
+    return Time(trigger_time)
 
 
 TriggerTimeDep = Annotated[datetime, Depends(trigger_time)]

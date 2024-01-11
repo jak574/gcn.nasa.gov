@@ -1,12 +1,7 @@
-# Copyright © 2023 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
-# All Rights Reserved.
-
-from datetime import datetime
-
 import astropy.units as u  # type: ignore
 import numpy as np
 from astropy.constants import c, h  # type: ignore
+from astropy.time import Time  # type: ignore
 
 from ..base.config import ConfigSchema
 
@@ -75,7 +70,7 @@ SWIFT = {
         "parallax": True,  # Calculate parallax for Moon/Sun
         "apparent": True,  # Use apparent positions for Moon/Sun
         "velocity": True,  # Calculate Velocity of spacecraft (slower, but needed for pole, ram constraints)
-        "stepsize": 60,  # Stepsize
+        "stepsize": 60 * u.s,  # Stepsize
     },
     # Visibility constraint calculation defaults. i.e. what constraints should be considered
     "visibility": {
@@ -85,25 +80,25 @@ SWIFT = {
         "sun_cons": True,  # Calculate Sun Constraint
         "ram_cons": False,  # Calculate Ram Constraint
         "pole_cons": False,  # Calcualte Orbit Pole Constraint
-        "saa_cons": True,  # Calculate time in SAA as a constraint
-        "ram_cons": False,  # Calculate Ram Constraint
+        "saa_cons": True,  # Calculate time in SAA as a constraintruf
         # Constraint avoidance values
-        "earthoccult": 28,  # How many degrees from Earth Limb can you look?
-        "moonoccult": 22,  # degrees from center of Moon
-        "sunoccult": 46,  # degrees from center of Sun
-        "ramsize": 10,  # degrees from center of ram direction
-        "sunextra": 1,  # degrees buffer used for planning purpose
-        "earthextra": 5,  # degrees buffer used for planning purpose
-        "moonextra": 1,  # degrees buffer used for planning purpose
-        "ramextra": 0,  # degrees buffer used for planning purpose
+        "earthoccult": 28 * u.deg,  # How many degrees from Earth Limb can you look?
+        "moonoccult": 22 * u.deg,  # degrees from center of Moon
+        "sunoccult": 46 * u.deg,  # degrees from center of Sun
+        "ramsize": 10 * u.deg,  # degrees from center of ram direction
+        "sunextra": 1 * u.deg,  # degrees buffer used for planning purpose
+        "earthextra": 5 * u.deg,  # degrees buffer used for planning purpose
+        "moonextra": 1 * u.deg,  # degrees buffer used for planning purpose
+        "ramextra": 0 * u.deg,  # degrees buffer used for planning purpose
     },
     # Information on where to obtain a TLE for this Observatory
     "tle": {
-        "tle_bad": 4,  # days
+        "tle_bad": 4 * u.day,  # days
         "tle_name": "SWIFT",
+        "tle_norad_id": 28485,
         "tle_concat": "https://www.swift.ac.uk/about/status_files/tle",
         "tle_url": "https://celestrak.org/NORAD/elements/gp.php?INTDES=2004-047",
-        "tle_min_epoch": datetime(2023, 11, 20),
+        "tle_min_epoch": Time("2004-11-20", format="isot", scale="utc"),
     },
 }
 

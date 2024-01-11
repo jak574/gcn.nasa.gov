@@ -10,7 +10,7 @@ from shapely.geometry import Polygon  # type: ignore
 from ..base.config import set_observatory
 from ..base.saa import SAABase, SAAGetSchema, SAAPolygonBase, SAASchema
 from .config import NICER
-from .ephem import Ephem
+from .ephem import NICEREphem
 
 
 class NICERSAAPolygon(SAAPolygonBase):
@@ -54,7 +54,7 @@ class NICERSAA(SAABase):
         Start time of SAA search
     end : datetime
         End time of SAA search
-    ephem : Optional[Ephem]
+    ephem : Optional[NICEREphem]
         Ephem object to use for SAA calculations
     stepsize : int
         Step size in seconds for SAA calculations
@@ -72,7 +72,7 @@ class NICERSAA(SAABase):
 
     # Internal things
     saa = NICERSAAPolygon()
-    ephem: Ephem
+    ephem: NICEREphem
     begin: datetime
     end: datetime
     stepsize: int
@@ -81,7 +81,7 @@ class NICERSAA(SAABase):
         self,
         begin: datetime,
         end: datetime,
-        ephem: Optional[Ephem] = None,
+        ephem: Optional[NICEREphem] = None,
         stepsize: int = 60,
     ):
         # Attributes
@@ -93,7 +93,7 @@ class NICERSAA(SAABase):
         self.begin = begin
         self.end = end
         if ephem is None:
-            self.ephem = Ephem(begin=begin, end=end, stepsize=stepsize)
+            self.ephem = NICEREphem(begin=begin, end=end, stepsize=stepsize)
             self.stepsize = stepsize
         else:
             self.ephem = ephem
@@ -120,7 +120,7 @@ class NICERSAA(SAABase):
             True if we're in the SAA, False otherwise
         """
         # Calculate an ephemeris for the exact time requested
-        ephem = Ephem(begin=dttime, end=dttime)  # type: ignore
+        ephem = NICEREphem(begin=dttime, end=dttime)  # type: ignore
         return cls.saa.insaa(ephem.longitude[0], ephem.latitude[0])
 
 

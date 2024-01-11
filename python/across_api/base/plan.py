@@ -131,7 +131,7 @@ class PlanBase(ACROSSAPIBase):
             and hasattr(self._entry_model, "obsid")
         ):
             # Convert obsid to a list of one
-            if type(self.obsid) is list:
+            if isinstance(self.obsid, list):
                 obsid = [obsid for obsid in self.obsid]
             else:
                 obsid = [self.obsid]
@@ -147,11 +147,11 @@ class PlanBase(ACROSSAPIBase):
         ):
             # Convert targetid to a list of one
             targetid = self.targetid
-            if type(self.targetid) is int:
+            if isinstance(self.targetid, int):
                 targetid = [self.targetid]
 
             # Look for all targetids (if no obsid given)
-            elif targetid is not None and type(targetid) is list:
+            elif targetid is not None and isinstance(targetid, list):
                 command = command.filter(self._entry_model.targetid.in_(targetid))
 
         if command == select(self._entry_model):
@@ -165,7 +165,7 @@ class PlanBase(ACROSSAPIBase):
 
         # Fetch from database
         with Session(engine) as sess:
-            results = sess.execute(command)
-            values = results.fetchall()
+            result = sess.execute(command)
+            values = result.all()
             self.entries = [self._entry_schema.model_validate(val[0]) for val in values]
         return True

@@ -1,12 +1,9 @@
-# Copyright © 2023 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
-# All Rights Reserved.
-
 from datetime import datetime
 from io import BytesIO
 from typing import Annotated, Optional
 
 from astropy.io import fits  # type: ignore
+from astropy.time import Time  # type: ignore
 from fastapi import Depends, File, Query, status
 
 from ..base.api import (
@@ -31,10 +28,10 @@ from ..base.api import (
     TriggerTimeDep,
     app,
 )
-from ..base.schema import EphemSchema, SAASchema, TLESchema
-from ..functions import convert_to_dt
+from ..base.schema import EphemSchema, SAASchema, TLESchema, VisibilitySchema
 from .ephem import BurstCubeEphem
 from .fov import BurstCubeFOVCheck
+from .requests import BurstCubeTOORequests
 from .saa import BurstCubeSAA
 from .schema import (
     BurstCubeFOVCheckSchema,
@@ -42,8 +39,8 @@ from .schema import (
     BurstCubeTOOSchema,
 )
 from .tle import BurstCubeTLE
-from .toorequest import BurstCubeTOO, BurstCubeTOOPutSchema, BurstCubeTOORequests
-from .visibility import BurstCubeVisibility, BurstCubeVisibilitySchema
+from .toorequest import BurstCubeTOO
+from .visibility import BurstCubeVisibility
 
 
 # BurstCube Deps
@@ -56,7 +53,7 @@ async def optional_trigger_time(
         ),
     ] = None,
 ) -> Optional[datetime]:
-    return convert_to_dt(trigger_time)
+    return Time(trigger_time)
 
 
 OptionalTriggerTimeDep = Annotated[datetime, Depends(optional_trigger_time)]
@@ -109,7 +106,7 @@ async def burstcube_saa(
     return BurstCubeSAA(stepsize=stepsize, **daterange).schema
 
 
-@app.get("/burstcube/too", status_code=status.HTTP_201_CREATED)
+@app.post("/burstcube/too", status_code=status.HTTP_201_CREATED)
 async def burstcube_too_submit(
     user: LoginDep,
     ra_dec: OptionalRaDecDep,
@@ -162,13 +159,13 @@ async def burstcube_too_submit(
 async def burstcube_too_update(
     user: LoginDep,
     id: IdDep,
-    data: BurstCubeTOOPutSchema,
+    data: BurstCubeTOOSchema,
 ) -> BurstCubeTOOSchema:
     """
     Update a BurstCube TOO object with the given ID number.
     """
     too = BurstCubeTOO(api_key=user["api_key"], **data.model_dump())
-    too.post()
+    too.put()
     return too.schema
 
 
@@ -221,11 +218,21 @@ async def burstcube_too_requests(
     ).schema
 
 
+@app.get("/burstcube/tle")
+async def burstcube_tle(
+    epoch: EpochDep,
+) -> TLESchema:
+    """
+    Returns the best TLE for BurstCube for a given epoch.
+    """
+    return BurstCubeTLE(epoch=epoch).schema
+
+
 @app.get("/burstcube/visibility")
 async def burstcube_visibility(
     daterange: DateRangeDep,
     ra_dec: RaDecDep,
-) -> BurstCubeVisibilitySchema:
+) -> VisibilitySchema:
     """
     Returns the visibility of an astronomical object to BurstCube for a given date range and RA/Dec coordinates.
     """
@@ -235,13 +242,3 @@ async def burstcube_visibility(
         ra=ra_dec["ra"],
         dec=ra_dec["dec"],
     ).schema
-
-
-@app.get("/burstcube/tle")
-async def burstcube_tle(
-    epoch: EpochDep,
-) -> TLESchema:
-    """
-    Returns the best TLE for BurstCube for a given epoch.
-    """
-    return BurstCubeTLE(epoch=epoch).schema

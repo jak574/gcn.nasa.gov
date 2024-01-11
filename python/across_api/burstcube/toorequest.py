@@ -1,22 +1,18 @@
-# Copyright © 2023 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
-# All Rights Reserved.
-
-from datetime import datetime, timedelta
 from typing import Optional
 
 import astropy.units as u  # type: ignore
 import numpy as np  # type: ignore
-from astropy.coordinates import SkyCoord  # type: ignore
+from astropy.time import Time  # type: ignore
 from boto3.dynamodb.conditions import Key  # type: ignore
 from fastapi import HTTPException
 
+from ..base.schema import AstropySeconds
+
 from ..across.user import check_api_key
 from arc import tables  # type: ignore
-from ..base.common import ACROSSAPIBase
+from ..base.common import ACROSSAPIBase, round_time
 from ..base.config import set_observatory
 from ..burstcube.fov import BurstCubeFOVCheck
-from ..functions import round_time
 from .config import BURSTCUBE
 from .models import BurstCubeTOOModel
 from .saa import SAA
@@ -24,11 +20,8 @@ from .schema import (
     BurstCubePoint,
     BurstCubeTOODelSchema,
     BurstCubeTOOGetSchema,
-    BurstCubeTOOModelSchema,
     BurstCubeTOOPostSchema,
     BurstCubeTOOPutSchema,
-    BurstCubeTOORequestsGetSchema,
-    BurstCubeTOORequestsSchema,
     BurstCubeTOOSchema,
     TOOReason,
     TOOStatus,
@@ -42,11 +35,11 @@ class BurstCubeTOO(ACROSSAPIBase):
 
     Parameters
     ----------
-    username : str
+    username
         Username of user making request
-    api_key : str
+    api_key
         API key of user making request
-    id : Optional[int], optional
+    id
         ID of BurstCubeTOO to fetch, by default None
     """
 
@@ -58,20 +51,20 @@ class BurstCubeTOO(ACROSSAPIBase):
 
     id: Optional[str]
     username: str
-    timestamp: Optional[datetime]
+    timestamp: Optional[Time]
     ra: Optional[float]
     dec: Optional[float]
     error: Optional[float]
-    trigger_time: datetime
+    trigger_time: Time
     trigger_mission: str
     trigger_instrument: str
     trigger_id: str
     trigger_duration: Optional[float]
     classification: Optional[str]
     justification: Optional[str]
-    begin: Optional[datetime]
-    end: Optional[datetime]
-    exposure: float
+    begin: Optional[Time]
+    end: Optional[Time]
+    exposure: AstropySeconds
     offset: float
     reason: TOOReason
     healpix_loc: Optional[np.ndarray]
@@ -95,10 +88,9 @@ class BurstCubeTOO(ACROSSAPIBase):
         self.warnings = []
 
         # Parameter defaults
-        self.exposure = 200  # default exposure time (e.g. length of dump)
+        self.exposure = 200 * u.s  # default exposure time (e.g. length of dump)
         # default offset. Moves the triggertime 50s before the middle of the dump window.
-        self.offset = -50
-        # Status of job
+        self.offset = -50 * u.s
 
         # Parse Arguments
         self.username = username
@@ -129,7 +121,7 @@ class BurstCubeTOO(ACROSSAPIBase):
         if "Item" not in response:
             raise HTTPException(404, "BurstCubeTOO not found.")
 
-        too = BurstCubeTOOModelSchema.model_validate(response["Item"])
+        too = BurstCubeTOOSchema.model_validate(response["Item"])
         for k, v in too:
             setattr(self, k, v)
         return True
@@ -172,11 +164,10 @@ class BurstCubeTOO(ACROSSAPIBase):
         """
 
         # Fetch previous BurstCubeTOOs
-
         response = self.table.scan(
             FilterExpression=Key("epoch").between(
-                str(self.trigger_time - timedelta(seconds=1)),
-                str(self.trigger_time + timedelta(seconds=1)),
+                str(self.trigger_time - 1 * u.s),
+                str(self.trigger_time + 1 * u.s),
             )
         )
 
@@ -188,9 +179,10 @@ class BurstCubeTOO(ACROSSAPIBase):
         found = len(response["Items"])
         deleted = 0
         for resp in response["Items"]:
-            too = BurstCubeTOOModelSchema.model_validate(resp)
+            too = BurstCubeTOOSchema.model_validate(resp)
             # If this BurstCubeTOO gives RA/Dec and the previous didn't then we
             # should override the previous one
+
             if too.ra is None and self.ra is not None:
                 print(f"deleting old BurstCubeTOO {too.id} as RA now given")
                 self.table.delete_item(Key={"id": too.id})
@@ -244,8 +236,8 @@ class BurstCubeTOO(ACROSSAPIBase):
 
         # If id is given, assume we're modifying an existing BurstCubeTOO.
         # Check if this BurstCubeTOO exists and is of the same username
+        response = self.table.get_item(Key={"id": self.id})
 
-        response = self.table.delete_item(Key={"id": self.id})
         # Check if the TOO exists
         if "Item" not in response:
             raise HTTPException(404, "BurstCubeTOO not found.")
@@ -255,6 +247,8 @@ class BurstCubeTOO(ACROSSAPIBase):
             raise HTTPException(401, "BurstCubeTOO not owned by user.")
 
         # Write BurstCubeTOO to the database
+        response = self.table.delete_item(Key={"id": self.id})
+
         too = BurstCubeTOOModel(**self.schema.model_dump(mode="json"))
         too.save()
 
@@ -270,27 +264,27 @@ class BurstCubeTOO(ACROSSAPIBase):
             Are BurstCubeTOO parameters valid? True | False
         """
         # Check if the trigger time is in the future
-        if self.trigger_time > datetime.utcnow():
+        if self.trigger_time > Time.now():
             self.warnings.append("Trigger time is in the future.")
             self.reason = TOOReason.other
             self.status = TOOStatus.rejected
             return False
 
         # Reject if trigger is > 48 hours old
-        if self.trigger_time < datetime.utcnow() - timedelta(hours=48):
+        if self.trigger_time < Time.now() - 48 * u.hour:
             self.reason = TOOReason.too_old
             self.warnings.append("Trigger is too old.")
             self.status = TOOStatus.rejected
             return False
 
         # Check if the trigger time is in the SAA
-        saa = SAA(begin=self.trigger_time, end=self.trigger_time, stepsize=1)
+        saa = SAA(begin=self.trigger_time, end=self.trigger_time, stepsize=1 * u.s)
         if saa.insaa(self.trigger_time):
             self.warnings.append("Trigger time inside SAA.")
             self.reason = TOOReason.saa
             self.status = TOOStatus.rejected
             return False
-        print(f"{self.ra=} {self.dec=} {self.healpix_loc=}")
+
         # Check if the trigger time is inside FOV
         if (
             self.ra is not None and self.dec is not None
@@ -302,7 +296,7 @@ class BurstCubeTOO(ACROSSAPIBase):
                 dec=self.dec,
                 healpix_loc=self.healpix_loc,
                 healpix_order=self.healpix_order,
-                stepsize=1,
+                stepsize=1 * u.s,
             )
             if fov.get() is True:
                 # Check to see if trigger was in instrument FOV
@@ -352,11 +346,10 @@ class BurstCubeTOO(ACROSSAPIBase):
         if self.begin is None or self.end is None:
             # If self.offset = 0, triggertime will be at the center of the dump window
             # FIXME - why is it necessary to convert offset into a int from a string?
-            self.offset = int(self.offset)
-            self.begin = round_time(self.trigger_time, 1) - timedelta(
-                seconds=self.exposure + self.offset
+            self.begin = (
+                round_time(self.trigger_time, 1 * u.s) - self.exposure + self.offset
             )
-            self.end = self.begin + timedelta(seconds=self.exposure)
+            self.end = self.begin + self.exposure
 
         # Check if this matches a previous BurstCubeTOO
         if self.check_for_previous_toos():
@@ -372,10 +365,8 @@ class BurstCubeTOO(ACROSSAPIBase):
         self.too_info = self.too_info + " ".join(self.warnings)
 
         # Write BurstCubeTOO to the database
-        self.timestamp = datetime.utcnow()
-        too = BurstCubeTOOModel(
-            **BurstCubeTOOModelSchema.model_validate(self).model_dump(mode="json")
-        )
+        self.timestamp = Time.now()
+        too = BurstCubeTOOModel(**self.schema.model_dump(mode="json"))
 
         too.save()
         self.id = too.id
@@ -383,188 +374,8 @@ class BurstCubeTOO(ACROSSAPIBase):
         return True
 
 
-class BurstCubeTOORequests(ACROSSAPIBase):
-    """
-    Class to fetch multiple BurstCubeTOO requests, based on various filters.
-
-    Note that the filtering right now is based on DynamoDB scan, which is not
-    very efficient. This should be replaced with a query at some point.
-
-    Parameters
-    ----------
-    username : str
-        Username for API
-    api_key : str
-        API Key for user
-    begin : Optional[datetime]
-        Start time of plan search
-    end : Optional[datetime]
-        End time of plan search
-    limit : Optional[int]
-        Limit number of searches
-    trigger_time : Optional[datetime]
-        Time of trigger
-    trigger_mission : Optional[str]
-        Mission of trigger
-    trigger_instrument : Optional[str]
-        Instrument of trigger
-    trigger_id : Optional[str]
-        ID of trigger
-    ra : Optional[float]
-        Right ascension of trigger search
-    dec : Optional[float]
-        Declination of trigger search
-    radius : Optional[float]
-        Radius of search around for trigger
-
-    Attributes
-    ----------
-    entries : list
-        List of BurstCubeTOO requests
-    status : JobInfo
-        Status of BurstCubeTOO query
-    """
-
-    _schema = BurstCubeTOORequestsSchema
-    _get_schema = BurstCubeTOORequestsGetSchema
-    mission = "ACROSS"
-
-    def __getitem__(self, i):
-        return self.entries[i]
-
-    def __len__(self):
-        return len(self.entries)
-
-    def __init__(
-        self,
-        username: str,
-        api_key: str,
-        begin: Optional[datetime] = None,
-        end: Optional[datetime] = None,
-        limit: Optional[int] = None,
-        trigger_time: Optional[datetime] = None,
-        trigger_mission: Optional[str] = None,
-        trigger_instrument: Optional[str] = None,
-        trigger_id: Optional[str] = None,
-        ra: Optional[float] = None,
-        dec: Optional[float] = None,
-        radius: Optional[float] = None,
-    ):
-        # Default parameters
-        self.username = username
-        self.api_key = api_key
-        self.trigger_time = trigger_time
-        self.trigger_instrument = trigger_instrument
-        self.trigger_mission = trigger_mission
-        self.trigger_id = trigger_id
-        self.limit = limit
-        self.begin = begin
-        self.end = end
-        self.ra = ra
-        self.dec = dec
-        self.radius = radius
-        # Attributes
-        self.entries: list = []
-
-        # Parse Arguments
-        if self.validate_get():
-            self.get()
-
-    @check_api_key(anon=False)
-    def get(self) -> bool:
-        """
-        Get a list of BurstCubeTOO requests
-
-        Returns
-        -------
-        bool
-            Did this work? True | False
-        """
-        # Validate query
-        if not self.validate_get():
-            return False
-        table = tables.table("burstcube_too")
-
-        filters = list()
-
-        # Search for events that cover a given trigger_time
-        if self.trigger_time is not None:
-            filters.append(
-                Key("begin").lte(str(self.trigger_time))
-                & Key("end").gte(str(self.trigger_time))
-            )
-
-        # Search for events that overlap a given date range
-        if self.begin is not None and self.end is not None:
-            filters.append(
-                Key("begin").between(str(self.begin), str(self.end))
-                | Key("end").between(str(self.begin), str(self.end))
-            )
-
-        # Select on trigger_mission if given
-        if self.trigger_mission is not None:
-            filters.append(Key("trigger_mission").eq(self.trigger_mission))
-
-        # Select on trigger_instrument if given
-        if self.trigger_instrument is not None:
-            filters.append(Key("trigger_instrument").eq(self.trigger_instrument))
-
-        # Select on trigger_id if given
-        if self.trigger_id is not None:
-            filters.append(Key("trigger_id").eq(self.trigger_id))
-
-        # Select on trigger_time if given
-        if self.trigger_time is not None:
-            filters.append(
-                Key("begin").lte(str(self.trigger_time))
-                & Key("end").gte(str(self.trigger_time))
-            )
-
-        # Check if a radius has been set, if not use default
-        # FIXME: Set to specific instrument FOV
-        if self.ra is not None and self.dec is not None and self.radius is None:
-            self.radius = 1
-
-        # Build the filter expression and query the table
-        if len(filters) > 0:
-            f = filters[0]
-            for filt in filters[1:]:
-                f = f & filt
-            toos = table.scan(FilterExpression=f)
-        else:
-            toos = table.scan()
-
-        # Convert entries for return
-        self.entries = [
-            BurstCubeTOOModelSchema.model_validate(too) for too in toos["Items"]
-        ]
-
-        # Only include entries where the RA/Dec is within the given self.radius value
-        # NOTE: This filters out any entries where RA/Dec is not given
-        # FIXME: This is not very efficient, we should do this in the query
-        if self.ra is not None and self.dec is not None and self.radius is not None:
-            self.entries = [
-                too
-                for too in self.entries
-                if too.ra is not None
-                and (
-                    SkyCoord(too.ra, too.dec, unit="deg").separation(
-                        SkyCoord(self.ra, self.dec, unit="deg")
-                    )
-                    < self.radius * u.deg
-                )
-            ]
-
-        # Sort and limit the results
-        self.entries.sort(key=lambda x: x.trigger_time, reverse=True)
-        self.entries = self.entries[: self.limit]
-
-        return True
-
-
 # Short aliases for classes
-TOORequests = BurstCubeTOORequests
 TOO = BurstCubeTOO
-TOOModelSchema = BurstCubeTOOModelSchema
+TOOModelSchema = BurstCubeTOOSchema
 TOOPostSchema = BurstCubeTOOPostSchema
 TOOPutSchema = BurstCubeTOOPutSchema

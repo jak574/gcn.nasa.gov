@@ -2,15 +2,16 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from arc import tables  # type: ignore
 from datetime import datetime, timedelta
 from typing import Any
 
+from arc import tables  # type: ignore
 from boto3.dynamodb.conditions import Key  # type: ignore
 from pydantic import Field, computed_field
 from sqlalchemy import DateTime, Float, Integer, String
-from sqlalchemy.orm.base import Mapped  # type: ignore
 from sqlalchemy.orm._orm_constructors import mapped_column
+from sqlalchemy.orm.base import Mapped  # type: ignore
+
 from .schema import BaseSchema
 
 

@@ -2,16 +2,145 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from datetime import datetime, timedelta
-from typing import Any, List, Optional, Union
+from datetime import datetime
+from typing import Annotated, Any, List, Optional, Union
 
 import astropy.units as u  # type: ignore
-import numpy as np
 from astropy.constants import c, h  # type: ignore
-from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
+from astropy.coordinates import (  # type: ignore
+    CartesianRepresentation,
+    Latitude,
+    Longitude,
+    SkyCoord,
+)
+from astropy.time import Time  # type: ignore
+from astropy.units.quantity import Quantity  # type: ignore
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    WithJsonSchema,
+    computed_field,
+    conlist,
+    model_validator,
+)
 from pydantic_core import Url
 
-from ..functions import convert_to_dt
+from arc import tables  # type: ignore
+
+# Define a Pydantic type for astropy Time objects, which will be serialized as
+# a naive UTC datetime object, or a string in ISO format for JSON.
+AstropyTime = Annotated[
+    Time,
+    BeforeValidator(lambda x: Time(x)),
+    PlainSerializer(
+        lambda x: x.utc.datetime,
+        return_type=datetime,
+    ),
+    WithJsonSchema({"type": "string", "format": "date-time"}, mode="serialization"),
+    WithJsonSchema({"type": "string", "format": "date-time"}, mode="validation"),
+]
+# Define a Pydantic type for list-type astropy Time objects, which will be
+# serialized as a list of naive UTC datetime objects, or a list of strings in
+# ISO format for JSON.
+AstropyTimeList = Annotated[
+    Time,
+    BeforeValidator(lambda x: Time(x)),
+    PlainSerializer(
+        lambda x: x.utc.datetime.tolist(),
+        return_type=List[datetime],
+    ),
+    WithJsonSchema(
+        {"type": "array", "items": {"type": "string", "format": "date-time"}},
+        mode="serialization",
+    ),
+    WithJsonSchema(
+        {"type": "array", "items": {"type": "string", "format": "date-time"}},
+        mode="validation",
+    ),
+]
+
+# Define a Pydantic type for astropy Latitude, Longitude and Quantity list-type
+# objects, which will be serialized as a list of float in units of degrees.
+AstropyDegrees = Annotated[
+    Union[Latitude, Longitude, Quantity],
+    PlainSerializer(
+        lambda x: x.deg.tolist()
+        if type(x) is not Quantity
+        else x.to(u.deg).value.tolist(),
+        return_type=List[float],
+    ),
+]
+
+AstropyAngle = Annotated[
+    Quantity,
+    PlainSerializer(
+        lambda x: x.deg,
+        return_type=float,
+    ),
+]
+
+# Pydantic type to serialize astropy SkyCoord or CartesianRepresentation objects as a list
+# of vectors in units of km
+AstropyPositionVector = Annotated[
+    Union[CartesianRepresentation, SkyCoord],
+    PlainSerializer(
+        lambda x: x.xyz.to(u.km).value.T.tolist()
+        if type(x) is CartesianRepresentation
+        else x.cartesian.xyz.to(u.km).value.T.tolist(),
+        return_type=List[conlist(float, min_length=3, max_length=3)],  # type: ignore
+    ),
+]
+
+# Pydantic type to serialize astropy CartesianRepresentation velocity objects as a list
+# of vectors in units of km/s
+AstropyVelocityVector = Annotated[
+    CartesianRepresentation,
+    PlainSerializer(
+        lambda x: x.xyz.to(u.km / u.s).value.T.tolist(),
+        return_type=List[conlist(float, min_length=3, max_length=3)],  # type: ignore
+    ),
+]
+
+# Pydantic type to serialize astropy SkyCoord objects as a list
+# of vectors with no units
+AstropyUnitVector = Annotated[
+    SkyCoord,
+    PlainSerializer(
+        lambda x: x.cartesian.xyz.value.T.tolist(),
+        return_type=List[conlist(float, min_length=3, max_length=3)],  # type: ignore
+    ),
+]
+
+
+# Pydantic type for a Astropy Time  in days
+AstropyDays = Annotated[
+    Quantity,
+    PlainSerializer(
+        lambda x: x.to(u.day).value,
+        return_type=float,
+    ),
+]
+
+# Pydantic type for a Astropy Time  in seconds
+AstropySeconds = Annotated[
+    Quantity,
+    BeforeValidator(lambda x: x * u.s if type(x) is not Quantity else x.to(u.s)),
+    PlainSerializer(
+        lambda x: x.to(u.s).value,
+        return_type=float,
+    ),
+    WithJsonSchema(
+        {"type": "number"},
+        mode="serialization",
+    ),
+    WithJsonSchema(
+        {"type": "number"},
+        mode="validation",
+    ),
+]
 
 
 class BaseSchema(BaseModel):
@@ -22,7 +151,7 @@ class BaseSchema(BaseModel):
     Subclasses can inherit from this class and override the `from_attributes` method to define their own schema logic.
     """
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
 
 
 class CoordSchema(BaseSchema):
@@ -30,10 +159,10 @@ class CoordSchema(BaseSchema):
 
     Parameters
     ----------
-    ra : float
+    ra
         Right Ascension value in degrees. Must be 0 or greater
         and lower than 360.
-    dec : float
+    dec
         Declination value in degrees. Must be between -90 and 90.
     """
 
@@ -47,7 +176,7 @@ class PositionSchema(CoordSchema):
 
     Attributes
     ----------
-    error : Optional[float]
+    error
         The error associated with the position. Defaults to None.
     """
 
@@ -59,9 +188,9 @@ class OptionalCoordSchema(BaseSchema):
 
     Parameters
     ----------
-    ra : Optional[float], optional
+    ra
         Right Ascension value in degrees. Must be between 0 and 360.
-    dec : Optional[float], optional
+    dec
         Declination value in degrees. Must be between -90 and 90.
 
     Methods
@@ -81,7 +210,7 @@ class OptionalCoordSchema(BaseSchema):
 
         Parameters
         ----------
-        data : Any
+        data
             The data to be validated.
 
         Returns
@@ -106,7 +235,7 @@ class OptionalPositionSchema(OptionalCoordSchema):
 
     Attributes
     ----------
-    error : Optional[float]
+    error
         The error associated with the position. Defaults to None.
     """
 
@@ -118,14 +247,14 @@ class DateRangeSchema(BaseSchema):
 
     Parameters
     ----------
-    begin : datetime
+    begin
         The start date of the range.
-    end : datetime
+    end
         The end date of the range.
 
     Returns
     -------
-    data : Any
+    data
         The validated data with converted dates.
 
     Raises
@@ -135,15 +264,17 @@ class DateRangeSchema(BaseSchema):
 
     """
 
-    begin: datetime
-    end: datetime
+    begin: AstropyTime
+    end: AstropyTime
 
     @model_validator(mode="after")
     @classmethod
     def check_dates(cls, data: Any) -> Any:
-        data.end = convert_to_dt(data.end)
-        data.begin = convert_to_dt(data.begin)
+        data.end = Time(data.end)
+        data.begin = Time(data.begin)
         assert data.begin <= data.end, "End date should not be before begin"
+        assert data.begin.isscalar, "Begin date should not be a list"
+        assert data.end.isscalar, "End date should not be a list"
         return data
 
 
@@ -152,9 +283,9 @@ class OptionalDateRangeSchema(BaseSchema):
 
     Parameters
     ----------
-    begin : Optional[datetime], optional
+    begin
         The beginning date of the range, by default None
-    end : Optional[datetime], optional
+    end
         The end date of the range, by default None
 
     Methods
@@ -164,8 +295,8 @@ class OptionalDateRangeSchema(BaseSchema):
 
     """
 
-    begin: Optional[datetime] = None
-    end: Optional[datetime] = None
+    begin: Optional[AstropyTime] = None
+    end: Optional[AstropyTime] = None
 
     @model_validator(mode="after")
     @classmethod
@@ -174,7 +305,7 @@ class OptionalDateRangeSchema(BaseSchema):
 
         Parameters
         ----------
-        data : Any
+        data
             The data to be validated.
 
         Returns
@@ -193,9 +324,6 @@ class OptionalDateRangeSchema(BaseSchema):
             assert (
                 data.begin == data.end
             ), "Begin/End should both be set, or both not set"
-        else:
-            data.end = convert_to_dt(data.end)
-            data.begin = convert_to_dt(data.begin)
         if data.begin != data.end:
             assert data.begin <= data.end, "End date should not be before begin"
 
@@ -208,9 +336,9 @@ class UserSchema(BaseSchema):
 
     Parameters
     ----------
-    username : str
+    username
         The username for authentication.
-    api_key : str
+    api_key
         The API key for authentication.
     """
 
@@ -224,13 +352,13 @@ class VisWindow(DateRangeSchema):
 
     Parameters
     ----------
-    begin : datetime
+    begin
         The beginning of the window.
-    end : datetime
+    end
         The end of the window.
-    initial : str
+    initial
         The main constraint that ends at the beginning of the window.
-    final : str
+    final
         The main constraint that begins at the end of the window.
     """
 
@@ -259,49 +387,117 @@ class VisibilityGetSchema(CoordSchema, DateRangeSchema):
 
     Parameters
     ----------
-    stepsize : int, optional
-        The step size in seconds for the visibility data. Default is 60.
+    stepsize
+        The step size in seconds for the visibility data.
 
     Inherits
     --------
-    CoordSchema : Schema
+    CoordSchema
         Schema for coordinate data.
-    DateRangeSchema : Schema
+    DateRangeSchema
         Schema for date range data.
     """
 
-    stepsize: int = 60
+    stepsize: AstropySeconds
 
 
 class TLEEntry(BaseSchema):
     """
-    Represents a Two-Line Element (TLE) entry.
+    Represents a single TLE entry in the TLE database.
+
+    Parameters
+    ----------
+    satname
+        The name of the satellite from the Satellite Catalog.
+    tle1
+        The first line of the TLE.
+    tle2
+        The second line of the TLE.
 
     Attributes
     ----------
-    tle1 : str
-        The first line of the TLE.
-    tle2 : str
-        The second line of the TLE.
-    epoch:  datetime
-        The epoch of the TLE, calculated from the TLE1 line.
-
+    epoch
     """
 
+    __tablename__ = "acrossapi_tle"
+    satname: str  # Partition Key
     tle1: str = Field(min_length=69, max_length=69)
     tle2: str = Field(min_length=69, max_length=69)
 
-    @computed_field  # type: ignore
+    @computed_field  # type: ignore[misc]
     @property
-    def epoch(self) -> datetime:
-        """Calculate Epoch of TLE"""
+    def epoch(self) -> AstropyTime:
+        """
+        Calculate the Epoch of the TLE file. See
+        https://celestrak.org/columns/v04n03/#FAQ04 for more information on
+        how the year / epoch encoding works.
+
+        Returns
+        -------
+            The calculated epoch of the TLE.
+        """
+        # Extract epoch from TLE
         tleepoch = self.tle1.split()[3]
-        year, dayofyear = int(f"20{tleepoch[0:2]}"), float(tleepoch[2:])
-        fracday, dayofyear = np.modf(dayofyear)
-        epoch = datetime.fromordinal(
-            datetime(year, 1, 1).toordinal() + int(dayofyear) - 1
-        ) + timedelta(days=fracday)
-        return epoch
+
+        # Convert 2 number year into 4 number year.
+        tleyear = int(tleepoch[0:2])
+        if tleyear < 57:
+            year = 2000 + tleyear
+        else:
+            year = 1900 + tleyear
+
+        # Convert day of year into float
+        day_of_year = float(tleepoch[2:])
+
+        # Return Time epoch
+        return Time(f"{year}-01-01", scale="utc") + (day_of_year - 1) * u.day
+
+    @classmethod
+    def find_tles_between_epochs(
+        cls, satname: str, start_epoch: Time, end_epoch: Time
+    ) -> List[Any]:
+        """
+        Find TLE entries between two epochs in the TLE database for a given
+        satellite TLE name.
+
+        Arguments
+        ---------
+        satname
+            The common name for the spacecraft based on the Satellite Catalog.
+        start_epoch
+            The start time over which to search for TLE entries.
+        end_epoch
+            The end time over which to search for TLE entries.
+
+        Returns
+        -------
+            A list of TLEEntry objects between the specified epochs.
+        """
+        table = tables.table(cls.__tablename__)
+
+        # Query the table for TLEs between the two epochs
+        response = table.query(
+            KeyConditionExpression="satname = :satname AND epoch BETWEEN :start_epoch AND :end_epoch",
+            ExpressionAttributeValues={
+                ":satname": satname,
+                ":start_epoch": str(start_epoch.utc.datetime),
+                ":end_epoch": str(end_epoch.utc.datetime),
+            },
+        )
+
+        # Convert the response into a list of TLEEntry objects and return them
+        return [cls(**item) for item in response["Items"]]
+
+    def write(self):
+        """Write the TLE entry to the database."""
+        table = tables.table(self.__tablename__)
+        table.put_item(Item=self.model_dump(mode="json"))
+
+    @classmethod
+    def delete_entry(cls, satname: str, epoch: datetime) -> bool:
+        """Delete a TLE entry from the database."""
+        table = tables.table(cls.__tablename__)
+        return table.delete_item(Key={"satname": satname, "epoch": str(epoch)})
 
 
 class TLESchema(BaseSchema):
@@ -310,7 +506,7 @@ class TLESchema(BaseSchema):
 
     Attributes
     ----------
-    tle : TLEEntry
+    tle
         The TLE entry object.
     """
 
@@ -323,11 +519,11 @@ class TLEGetSchema(BaseSchema):
 
     Parameters
     ----------
-    epoch : datetime
+    epoch
         The epoch of the TLE.
     """
 
-    epoch: datetime
+    epoch: AstropyTime
 
 
 class SAAEntry(DateRangeSchema):
@@ -336,9 +532,9 @@ class SAAEntry(DateRangeSchema):
 
     Parameters
     ----------
-    begin : datetime
+    begin
         The start datetime of the SAA passage.
-    end : datetime
+    end
         The end datetime of the SAA passage.
     """
 
@@ -359,7 +555,7 @@ class SAASchema(BaseSchema):
 
     Parameters
     ----------
-    entries : List[SAAEntry]
+    entries
         List of SAAEntry objects.
     """
 
@@ -371,7 +567,7 @@ class SAAGetSchema(DateRangeSchema):
 
     Inherits
     --------
-    DateRangeSchema : Schema
+    DateRangeSchema
         Schema for date range data.
     """
 
@@ -385,23 +581,23 @@ class PointBase(OptionalCoordSchema):
 
     Parameters
     ----------
-    timestamp : datetime
+    timestamp
         The timestamp of the pointing.
-    roll : float, optional
+    roll
         The roll angle of the spacecraft.
-    observing : bool
+    observing
         Indicates whether the spacecraft is observing.
-    infov : bool, float, None, optional
+    infov
         Flag indicating whether an object is in the instrument field of view,
         can be True/False or a numerical fraction for larger uncertainties.
 
     Inherits
     --------
-    CoordSchema : Schema
+    CoordSchema
         Schema for coordinate data.
     """
 
-    timestamp: datetime
+    timestamp: AstropyTime
     roll: Optional[float] = None
     observing: bool
     infov: Union[bool, float, None] = None
@@ -412,7 +608,7 @@ class PointingSchemaBase(BaseSchema):
 
 
 class PointingGetSchemaBase(DateRangeSchema):
-    stepsize: int = 60
+    stepsize: AstropySeconds
 
 
 # Plan Schema
@@ -422,9 +618,9 @@ class PlanEntryBase(DateRangeSchema, CoordSchema):
 
     Parameters
     ----------
-    DateRangeSchema : class
+    DateRangeSchema
         The class representing the date range of the plan entry.
-    CoordSchema : class
+    CoordSchema
         The class representing the coordinates of the plan entry.
 
     Attributes
@@ -445,9 +641,9 @@ class PlanGetSchemaBase(OptionalDateRangeSchema, OptionalCoordSchema):
 
     Parameters
     ----------
-    obsid : Union[str, int, None], optional
+    obsid
         The observation ID. Defaults to None.
-    radius : Optional[float], optional
+    radius
         The radius for searching plans. Defaults to None.
     """
 
@@ -461,7 +657,7 @@ class PlanSchemaBase(BaseSchema):
 
     Parameters
     ----------
-    entries : List[PlanEntryBase]
+    entries
         List of plan entries.
     """
 
@@ -473,42 +669,19 @@ class PlanSchemaBase(BaseSchema):
 
 class EphemSchema(BaseSchema):
     """
-    Schema for ephemeral data.
-
-    Attributes
-    ----------
-    timestamp : List[datetime]
-        List of timestamps.
-    posvec : List[List[float]]
-        List of position vectors for the spacecraft in GCRS.
-    earthsize : List[float]
-        List of the angular size of the Earth to the spacecraft.
-    polevec : Optional[List[List[float]]], optional
-        List of orbit pole vectors, by default None.
-    velvec : Optional[List[List[float]]], optional
-        List of spacecraft velocity vectors, by default None.
-    sunvec : List[List[float]]
-        List of sun vectors.
-    moonvec : List[List[float]]
-        List of moon vectors.
-    latitude : List[float]
-        List of latitudes.
-    longitude : List[float]
-        List of longitudes.
-    stepsize : int, optional
-        Step size, by default 60.
+    Schema for ephemeris data.
     """
 
-    timestamp: List[datetime] = []
-    posvec: List[List[float]]
-    earthsize: List[float]
-    polevec: Optional[List[List[float]]] = None
-    velvec: Optional[List[List[float]]] = None
-    sunvec: List[List[float]]
-    moonvec: List[List[float]]
-    latitude: List[float]
-    longitude: List[float]
-    stepsize: int = 60
+    timestamp: AstropyTimeList
+    posvec: AstropyPositionVector
+    earthsize: AstropyDegrees
+    pole: AstropyUnitVector
+    velvec: AstropyVelocityVector
+    sun: AstropyPositionVector
+    moon: AstropyPositionVector
+    latitude: AstropyDegrees
+    longitude: AstropyDegrees
+    stepsize: AstropySeconds
 
 
 class EphemGetSchema(DateRangeSchema):
@@ -516,12 +689,12 @@ class EphemGetSchema(DateRangeSchema):
 
     Parameters
     ----------
-    stepsize : int, optional
+    stepsize
         The step size in seconds (default is 60).
 
     """
 
-    stepsize: int = 60
+    stepsize: AstropySeconds
     ...
 
 
@@ -534,19 +707,19 @@ class MissionSchema(BaseSchema):
 
     Parameters
     ----------
-    name : str
+    name
         The name of the mission.
-    shortname : str
+    shortname
         The short name of the mission.
-    agency : str
+    agency
         The agency responsible for the mission.
-    type : str
+    type
         The type of the mission.
-    pi : str, optional
+    pi
         The principal investigator of the mission. Defaults to None.
-    description : str
+    description
         A description of the mission.
-    website : Url
+    website
         The website URL of the mission.
     """
 
@@ -566,11 +739,11 @@ class FOVOffsetSchema(BaseSchema):
 
     Parameters
     ----------
-    ra_off : float
+    ra_off
         The angular offset in Right Ascension (RA) direction.
-    dec_off : float
+    dec_off
         The angular offset in Declination (Dec) direction.
-    roll_off : float
+    roll_off
         The rotational offset around the spacecraft pointing direction.
 
     """
@@ -586,15 +759,15 @@ class FOVSchema(BaseSchema):
 
     Attributes
     ----------
-    type : str
+    type
         The type of the FOV. Currently "AllSky", "Circular", "Square" and "HEALPix" are supported.
-    area : float
+    area
         The area of the FOV in degrees**2.
-    dimension : Optional[float]
+    dimension
         The dimension of the FOV.
-    filename : Optional[str], optional
+    filename
         The filename associated with the FOV.
-    boresight : Optional[FOVOffsetSchema], optional
+    boresight
         The boresight offset of the FOV.
 
     """
@@ -612,30 +785,30 @@ class InstrumentSchema(BaseSchema):
 
     Attributes
     ----------
-    name : str
+    name
         The name of the instrument.
-    shortname : str
+    shortname
         The short name of the instrument.
-    description : str
+    description
         The description of the instrument.
-    website : Url
+    website
         The website URL of the instrument.
-    energy_low : float
+    energy_low
         The low energy range of the instrument.
-    energy_high : float
+    energy_high
         The high energy range of the instrument.
-    fov : FOVSchema
+    fov
         The field of view of the instrument.
 
     Properties
     ----------
-    frequency_high : Quantity
+    frequency_high
         The high frequency range of the instrument.
-    frequency_low : Quantity
+    frequency_low
         The low frequency range of the instrument.
-    wavelength_high : Quantity
+    wavelength_high
         The high wavelength range of the instrument.
-    wavelength_low : Quantity
+    wavelength_low
         The low wavelength range of the instrument.
     """
 
@@ -670,18 +843,18 @@ class EphemConfigSchema(BaseSchema):
 
     Parameters
     ----------
-    parallax : bool
+    parallax
         Flag indicating whether to include parallax when calculating Moon/Sun
         positions.
-    apparent : bool
+    apparent
         Flag indicating whether to use apparent rather than astrometric
         positions.
-    velocity : bool
+    velocity
         Flag indicating whether to include velocity calculation (needed for
         calculating pole or ram constraints).
-    stepsize : int, optional
+    stepsize
         Step size in seconds. Default is 60.
-    earth_radius : float or None, optional
+    earth_radius
         Earth radius value. If None, it will be calculated. If float, it will
         be fixed to this value.
     """
@@ -689,9 +862,9 @@ class EphemConfigSchema(BaseSchema):
     parallax: bool
     apparent: bool
     velocity: bool
-    stepsize: int = 60
+    stepsize: AstropySeconds
     earth_radius: Optional[
-        float
+        AstropyAngle
     ] = None  # if None, calculate it, if float, fix to this value
 
 
@@ -700,33 +873,33 @@ class VisibilityConfigSchema(BaseSchema):
     Schema for configuring visibility constraints.
 
     Attributes:
-    earth_cons : bool
+    earth_cons
         Calculate Earth Constraint.
-    moon_cons : bool
+    moon_cons
         Calculate Moon Constraint.
-    sun_cons : bool
+    sun_cons
         Calculate Sun Constraint.
-    ram_cons : bool
+    ram_cons
         Calculate Ram Constraint.
-    pole_cons : bool
+    pole_cons
         Calculate Orbit Pole Constraint.
-    saa_cons : bool
+    saa_cons
         Calculate time in SAA as a constraint.
-    earthoccult : float
+    earthoccult
         How many degrees from Earth Limb can you look?
-    moonoccult : float
+    moonoccult
         Degrees from center of Moon.
-    sunoccult : float
+    sunoccult
         Degrees from center of Sun.
-    ramsize : float, optional
+    ramsize
         Degrees from center of ram direction. Defaults to 0.
-    sunextra : float, optional
+    sunextra
         Degrees buffer used for planning purpose. Defaults to 0.
-    earthextra : float, optional
+    earthextra
         Degrees buffer used for planning purpose. Defaults to 0.
-    moonextra : float, optional
+    moonextra
         Degrees buffer used for planning purpose. Defaults to 0.
-    ramextra : float, optional
+    ramextra
         Degrees buffer used for planning purpose. Defaults to 0.
     """
 
@@ -738,15 +911,15 @@ class VisibilityConfigSchema(BaseSchema):
     pole_cons: bool
     saa_cons: bool
     # Constraint avoidance values
-    earthoccult: float
-    moonoccult: float
-    sunoccult: float
-    ramsize: float = 0
+    earthoccult: AstropyAngle
+    moonoccult: AstropyAngle
+    sunoccult: AstropyAngle
+    ramsize: AstropyAngle
     # Extra degrees buffer used for planning purpose
-    sunextra: float = 0
-    earthextra: float = 0
-    moonextra: float = 0
-    ramextra: float = 0
+    sunextra: AstropyAngle
+    earthextra: AstropyAngle
+    moonextra: AstropyAngle
+    ramextra: AstropyAngle
 
 
 class TLEConfigSchema(BaseSchema):
@@ -755,26 +928,27 @@ class TLEConfigSchema(BaseSchema):
 
     Parameters
     ----------
-    tle_bad : float
+    tle_bad
         The threshold for determining if a TLE is considered bad in units
         of days. I.e. if the TLE is older than this value, it is considered
         bad.
-    tle_url : Optional[Url], optional
+    tle_url
         The URL for retrieving TLE data. Defaults to None.
-    tle_name : str
+    tle_name
         The name of the TLE.
-    tle_heasarc : Optional[Url], optional
+    tle_heasarc
         The URL for retrieving TLE data from HEASARC in their multi-TLE format.
         Defaults to None.
-    tle_celestrak : Optional[Url], optional
+    tle_celestrak
         The URL for retrieving TLE data from Celestrak. Defaults to None.
     """
 
-    tle_bad: float
+    tle_bad: AstropyDays
     tle_url: Optional[Url] = None
     tle_name: str
+    tle_norad_id: int
     tle_concat: Optional[Url] = None
-    tle_min_epoch: datetime
+    tle_min_epoch: AstropyTime
 
 
 class ConfigSchema(BaseSchema):
@@ -783,17 +957,17 @@ class ConfigSchema(BaseSchema):
 
     Parameters
     ----------
-    mission : MissionSchema
+    mission
         The mission schema.
-    instruments : List[InstrumentSchema]
+    instruments
         The list of instrument schemas.
-    primary_instrument : int, optional
+    primary_instrument
         The index of the primary instrument, defaults to 0.
-    ephem : EphemConfigSchema
+    ephem
         The ephem configuration schema.
-    visibility : VisibilityConfigSchema
+    visibility
         The visibility configuration schema.
-    tle : TLEConfigSchema
+    tle
         The TLE configuration schema.
     """
 

@@ -7,7 +7,7 @@ from ..base.schema import VisWindow
 from ..base.visibility import VisibilityBase, VisibilityGetSchema, VisibilitySchema
 from .config import NUSTAR
 from .ephem import Ephem
-from .saa import SAA
+from .saa import NuSTARSAA
 
 
 @set_observatory(NUSTAR)
@@ -45,7 +45,7 @@ class NuSTARVisibility(VisibilityBase, ACROSSAPIBase):
 
     # Internal parameters
     _ephem: Ephem
-    saa: SAA
+    saa: NuSTARSAA
 
     def __init__(
         self, ra: float, dec: float, begin: datetime, end: datetime, stepsize: int = 60
@@ -67,7 +67,7 @@ class NuSTARVisibility(VisibilityBase, ACROSSAPIBase):
             daybegin = datetime.combine(self.begin.date(), time())
             dayend = datetime.combine(self.end.date(), time()) + timedelta(days=1)
             self.ephem = Ephem(begin=daybegin, end=dayend, stepsize=self.stepsize)
-            self.saa = SAA(begin=daybegin, end=dayend, ephem=self.ephem)
+            self.saa = NuSTARSAA(begin=daybegin, end=dayend, ephem=self.ephem)
             self.get()
 
 

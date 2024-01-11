@@ -6,9 +6,9 @@ import hashlib
 from decimal import Decimal
 from typing import Optional
 
+from arc import tables  # type: ignore
 from pydantic import computed_field
 
-from arc import tables  # type: ignore
 from ..base.models import DynamoDBBase
 from ..base.schema import OptionalCoordSchema
 

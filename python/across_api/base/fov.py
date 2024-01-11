@@ -15,7 +15,7 @@ from astropy.io import fits  # type: ignore
 from erfa import pdp  # type: ignore
 from fastapi import HTTPException
 
-from ..functions import round_time
+from ..base.common import round_time
 from .common import ACROSSAPIBase
 from .ephem import EphemBase
 from .pointing import PointingBase
@@ -562,7 +562,7 @@ class CircularFOV(FOVBase):
         )
 
         # Convert radius float to astropy Quantity in degrees
-        if type(self.radius) is float:
+        if isinstance(self.radius, float):
             radius = self.radius * u.deg
         else:
             radius = self.radius

@@ -2,366 +2,368 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from datetime import datetime, timedelta
-from typing import List, Optional
+from functools import cached_property
+from typing import Optional, Tuple
 
 import astropy.units as u  # type: ignore
 import numpy as np
-from astropy.coordinates import TEME  # type: ignore
-from astropy.coordinates import AltAz  # type: ignore
-from astropy.coordinates import CartesianDifferential  # type: ignore
-from astropy.coordinates import (
+from astropy.coordinates import (  # type: ignore
     GCRS,
+    ITRS,
+    TEME,
+    CartesianDifferential,
     CartesianRepresentation,
-    EarthLocation,
+    Latitude,
+    Longitude,
     SkyCoord,
     get_body,
 )
 from astropy.time import Time  # type: ignore
-from erfa import pn, pxp  # type: ignore
 from fastapi import HTTPException
 from sgp4.api import Satrec  # type: ignore
 
-from .common import ACROSSAPIBase
-from .schema import EphemGetSchema, EphemSchema
-from .tle import TLEEntry
+from ..base.schema import EphemGetSchema, EphemSchema, TLEEntry
+from .common import ACROSSAPIBase, round_time
 
 # Constants
-EARTH_RADIUS = 6371  # km. Note this is average radius, as Earth is not a sphere.
+EARTH_RADIUS = 6371 * u.km  # km. Note this is average radius, as Earth is not a sphere.
+
+
+class EarthSatelliteLocation:
+    """
+    Class to calculate the position of a satellite in orbit around the Earth.
+    The default parameter for this class is a True Equator Mean Equinox (TEME)
+    coordinate with positiona and velocity, and a given obstime. `obstime`
+    should be an array like `Time` object, covering the period of interest.
+
+    The `from_tle` classmethod can be used to create an instance of this class
+    from a TLE (Two-Line Element) file. This uses the `sgp4` package to
+    calculate the position of the satellite in TEME coordinates, and returns an
+    instantiated `EarthSatelliteLocation` object.
+
+    Note this mimics the `astropy.coordinates` `EarthLocation` class, in that
+    it provides the method `get_gcrs_posvel` which returns the position and
+    velocity of the satellite in GCRS coordinates. Therefore this class can be
+    used by the astropy `get_body` function to set the location of the observer
+    to a Earth orbiting satellite, in place of an `EarthLocation` object (which
+    defines a ground based observatory).
+
+    This way you can calculate the RA/Dec of the Earth, Moon and Sun as viewed
+    from the satellite, including the effects of the satellite's motion on the
+    position of these objects in the sky.
+
+    This class also provides attributes for the latitude and longitude of the
+    spacecraft over the Earth, used for (e.g.) determining if the spacecraft is
+    in the South Atlantic Anomaly (SAA). This is done by calculating the
+    International Terrestrial Reference System (ITRS) position of the
+    spacecraft, and then converting this to latitude and longitude using the
+    `earth_location` method of the `ITRS` class.
+
+    Parameters
+    ----------
+    teme
+        The TEME position and velocity of the satellite.
+
+    Attributes
+    ----------
+    t
+        The time at which the satellite position was calculated.
+    gcrs
+        The GCRS position and velocity of the satellite.
+    itrs
+        The ITRS position and velocity of the satellite.
+    lon
+        The longitude of the satellite.
+    lat
+        The latitude of the satellite.
+
+    Methods
+    -------
+    get_gcrs_posvel
+        Calculate the GCRS position and velocity of the satellite at a given
+        time. Note the time must match the time used to instantiate the class.
+    """
+
+    # Type hints
+    teme: TEME
+
+    def __init__(self, teme: TEME):
+        self.teme = teme
+
+    @classmethod
+    def from_tle(cls, tle: TLEEntry, obstime: Time) -> "EarthSatelliteLocation":
+        """
+        Returns a EarthSatelliteLocation object for a given TLE and time. This
+        calculates the TEME position and velocity for a satellite, derived from
+        the TLE, using the `sgp4` package.
+
+        Parameters
+        ----------
+        obstime
+            Time to calculate position for. Must be array-type.
+
+        Returns
+        -------
+            A EarthSatelliteLocation object for the given TLE and time.
+        """
+        # Load in the TLE data
+        satellite = Satrec.twoline2rv(tle.tle1, tle.tle2)
+
+        # Calculate TEME position and velocity for Satellite
+        _, temes_p, temes_v = satellite.sgp4_array(obstime.jd1, obstime.jd2)
+
+        # Convert SGP4 TEME data to astropy TEME data
+        teme_p = CartesianRepresentation(temes_p.T * u.km)
+        teme_v = CartesianDifferential(temes_v.T * u.km / u.s)
+        teme = TEME(teme_p.with_differentials(teme_v), obstime=obstime)
+
+        # Return class with TEME loaded
+        return cls(teme)
+
+    @cached_property
+    def gcrs(self) -> GCRS:
+        """
+        Return the GCRS position and velocity for a satellite
+
+        Returns
+        -------
+            GCRS position and velocity for satellite
+        """
+
+        # Transform to TEME to GCRS
+        return self.teme.transform_to(GCRS(obstime=self.teme.obstime))
+
+    @cached_property
+    def itrs(self) -> ITRS:
+        """
+        Return the ITRS position and velocity for a satellite
+
+        Returns
+        -------
+            ITRS position and velocity for satellite
+        """
+        return self.gcrs.transform_to(ITRS(obstime=self.gcrs.obstime))
+
+    def get_gcrs_posvel(
+        self, t: Time
+    ) -> Tuple[CartesianRepresentation, CartesianRepresentation]:
+        """
+        Return the GCRS (Geocentric Celestial Reference System) position and
+        velocity for the satellite at a given time. Note that the time t has to
+        match the time used to instantiate the class.
+
+        Parameters
+        ----------
+        t
+            The time at which to calculate the position and velocity.
+
+        Returns
+        -------
+            A tuple containing the GCRS position and velocity as Cartesian coordinates.
+        """
+        # Check if t matches obstime
+        if t is not self.teme.obstime:
+            raise ValueError(
+                "Supplied Time does not match obstime of TEME position/velocity of satellite."
+            )
+
+        # Return values expected by get_body
+        return (
+            self.gcrs.cartesian.without_differentials(),
+            self.gcrs.velocity.to_cartesian(),
+        )
+
+    @cached_property
+    def lon(self) -> Longitude:
+        """
+        Returns the longitude of the satellite's location.
+
+        Returns:
+            The longitude of the satellite.
+        """
+        return self.itrs.earth_location.lon
+
+    @cached_property
+    def lat(self) -> Latitude:
+        """
+        Returns the latitude of the satellite's location.
+
+        Returns:
+            The latitude of the satellite.
+        """
+        return self.itrs.earth_location.lat
 
 
 class EphemBase(ACROSSAPIBase):
-    """Base class for Ephemeris API."""
+    """
+    Base class for computing ephemeris data, for spacecraft whose positions can
+    be determined using a Two-Line Element (TLE), i.e. most Earth-orbiting
+    spacecraft. This ephemeris primarily calculates the position of the
+    spacecraft in GCRS coordinates. It also calculates the position of the Sun
+    and Moon in GCRS coordinates, and the latitude and longitude of the
+    spacecraft over the Earth.
+
+    The design of this ephemeris class is based upon how actual LEO spacecraft
+    ephemeris calculations work, and therefore is designed to mimic constraints
+    calculated onboard a spacecraft, to as closely match and predict those as
+    possible.
+
+    Parameters
+    ----------
+    begin
+        The start time of the ephemeris.
+    end
+        The end time of the ephemeris.
+    stepsize
+        The time step size, the default is 60 seconds.
+
+    Attributes
+    ----------
+    earth_radius
+        The radius of the Earth in degrees. If not specified (None), it will be
+        calculated based on the distance from the Earth to the spacecraft.
+    tle
+        The TLE (Two-Line Element) data for the satellite.
+
+    Methods
+    -------
+    ephindex
+        Returns the array index for a given time.
+    get
+        Computes the ephemeris for the specified time range.
+    """
 
     _schema = EphemSchema
     _get_schema = EphemGetSchema
-    _cache_time = (
-        86400 * 7
-    )  # Cache Ephemeris for a week, because it really never goes out of date
+
     # Type hints
-    begin: datetime
-    end: datetime
-    stepsize: int
-    # ap_times: Time
+    begin: Time
+    end: Time
+    stepsize: u.Quantity
+    earth_radius: Optional[u.Quantity] = None
+    tle: Optional[TLEEntry] = None
 
-    username: str
-    parallax: bool
-    velocity: bool
-    apparent: bool
-    tle: Optional[TLEEntry]
-
-    def __init__(self) -> None:
-        # Internal values
-        self._beta: np.ndarray
-        self._ineclipse: np.ndarray
-        self._posvec: np.ndarray
-        self._polevec: Optional[np.ndarray] = None
-        self._pole: SkyCoord
-        self._sun: SkyCoord
-        self._moon: SkyCoord
-        self._ap_times: Time
-        self._velvec: np.ndarray
-        self._latitude: np.ndarray
-        self._longitude: np.ndarray
-        self._earthsize: np.ndarray
-        self._earth: SkyCoord
-        self._timestamp: List[datetime]
-        self.datetimes: List[datetime]
-
-        # Attributes
-
-    def __len__(self) -> int:
-        return len(self.timestamp)
-
-    def ephindex(self, dt: datetime) -> int:
-        """For a given time, return a time index that is valid for this ephemeris (rounded up)"""
-        return round((dt - self.timestamp[0]).total_seconds() / self.stepsize)
-
-    # These ensure that lists get converted back to np.ndarrays
-    @property
-    def posvec(self) -> np.ndarray:
-        return self._posvec
-
-    @posvec.setter
-    def posvec(self, vec):
-        self._posvec = np.array(vec)
-
-    # These ensure that lists get converted back to np.ndarrays
-    @property
-    def velvec(self) -> Optional[np.ndarray]:
-        if hasattr(self, "_velvec") is False:
-            return None
-        return self._velvec
-
-    @velvec.setter
-    def velvec(self, vec: np.ndarray):
-        if type(vec) is list:
-            vec = np.array(vec)
-        self._velvec = vec
-
-    # These ensure that lists get converted back to np.ndarrays
-    @property
-    def polevec(self) -> Optional[np.ndarray]:
-        return self._polevec
-
-    @polevec.setter
-    def polevec(self, vec):
-        if vec is not None:
-            self._polevec = np.array(vec)
-
-    @property
-    def pole(self):
-        if self._polevec is not None and hasattr(self, "_pole") is False:
-            self._pole = SkyCoord(
-                CartesianRepresentation(x=self._polevec.T),
-                # frame=GCRS(obstime=self.ap_times),
-            )
-        return self._pole
-
-    @property
-    def sunvec(self):
-        return self._sunvec
-
-    @sunvec.setter
-    def sunvec(self, vec):
-        self._sunvec = np.array(vec)
-
-    @property
-    def moonvec(self):
-        return self._moonvec
-
-    @moonvec.setter
-    def moonvec(self, vec):
-        self._moonvec = np.array(vec)
-
-    @property
-    def earthsize(self):
-        if self.config.ephem.earth_radius is not None:
-            return self.config.ephem.earth_radius * np.ones(len(self))
-        return self._earthsize
-
-    @earthsize.setter
-    def earthsize(self, es):
-        self._earthsize = np.array(es)
-
-    @property
-    def latitude(self):
-        return self._latitude
-
-    @latitude.setter
-    def latitude(self, vec):
-        self._latitude = np.array(vec)
-
-    @property
-    def longitude(self):
-        return self._longitude
-
-    @longitude.setter
-    def longitude(self, vec):
-        self._longitude = np.array(vec)
-
-    # Derived properties
-    @property
-    def ap_times(self) -> Time:
-        """Astropy Time array for the ephemeris"""
-        if not hasattr(self, "_ap_times"):
-            self._ap_times = Time(self.timestamp, format="datetime", scale="utc")
-        return self._ap_times
-
-    @property
-    def earth(self) -> SkyCoord:
-        """Earth RA/Dec"""
-        if hasattr(self, "_earth") is False:
-            self._earth = SkyCoord(
-                CartesianRepresentation(x=-self.posvec.T),
-                # frame=GCRS(obstime=self.ap_times),
-            )
-        return self._earth
-
-    @property
-    def earth_ra(self) -> np.ndarray:
-        return self.earth.ra.deg
-
-    @property
-    def earth_dec(self) -> np.ndarray:
-        return self.earth.dec.deg
-
-    @property
-    def sun_ra(self) -> np.ndarray:
-        return self.sun.ra.deg
-
-    @property
-    def sun_dec(self) -> np.ndarray:
-        return self.sun.dec.deg
-
-    @property
-    def moon_ra(self) -> np.ndarray:
-        return self.moon.ra.deg
-
-    @property
-    def moon_dec(self) -> np.ndarray:
-        return self.moon.dec.deg
-
-    @property
-    def tle_epoch(self) -> Optional[datetime]:
-        if self.tle is not None:
-            return self.tle.epoch
-        return None
-
-    @property
-    def beta(self) -> np.ndarray:
-        """Return beta angle"""
-        if hasattr(self, "_beta") is False:
-            self._beta = np.array(self.pole.separation(self.sun).deg) - 90
-        return self._beta
-
-    @property
-    def sun(self) -> SkyCoord:
-        """Calculate Sun RA/Dec"""
-        if hasattr(self, "_sun") is False:
-            if self.parallax:
-                self._sun = SkyCoord(
-                    CartesianRepresentation(
-                        x=self.sunvec.T - self.posvec.T,
-                    ),
-                    # frame=GCRS(obstime=self.ap_times),
-                )
-            else:
-                self._sun = SkyCoord(
-                    CartesianRepresentation(x=self.sunvec.T),
-                    # frame=GCRS(obstime=self.ap_times),
-                )
-        return self._sun
-
-    @property
-    def ineclipse(self) -> np.ndarray:
-        """Is the spacecraft in an Earth eclipse? Defined as when the Sun > 50% behind the Earth"""
-        return self.sun.separation(self.earth) < self.earthsize * u.deg
-
-    @property
-    def moon(self) -> SkyCoord:
-        """Calculate moon RA/Dec and vector"""
-        if hasattr(self, "_moon") is False:
-            if self.parallax:
-                # Calculate the position of the Moon from the spacecraft, not the center of the Earth
-                self._moon = SkyCoord(
-                    CartesianRepresentation(x=self.moonvec.T - self.posvec.T),
-                    # frame=GCRS(obstime=self.ap_times),
-                )
-            else:
-                # Calculate the position of the Moon from the center of the Earth
-                self._moon = SkyCoord(
-                    CartesianRepresentation(x=self.moonvec.T),
-                    # frame=GCRS(obstime=self.ap_times),
-                )
-        return self._moon
-
-    def compute(self) -> bool:
-        """Compute the ephemeris for the specified time range with at a
-        time resolution given by self.stepsize.
-
-        Note only calculates Spacecraft position, velocity (optionally),
-        Sun/Moon position and latitude/longitude of the spacecraft
-        initially. These are stored as arrays of vectors as
-        a 2xN or 3xN array of floats, in units of degrees (Lat/Lon) or km
-        (position) and km/s (velocity).
-
-        These are stored as floats to allow easy serialization into JSON,
-        download and caching. Derived values are calculated on the fly.
-        """
-
-        # Set up the time stuff
-        dtstart = self.begin
-        dtstart = dtstart
-
-        # Check the TLE is loaded
+    def __init__(self, begin: Time, end: Time, stepsize: u.Quantity = 60 * u.s):
+        # Check if TLE is loaded
         if self.tle is None:
             raise HTTPException(
                 status_code=404, detail="No TLE available for this epoch"
             )
 
-        # Load the TLE
-        self.satellite = Satrec.twoline2rv(self.tle.tle1, self.tle.tle2)
+        # Parse inputs, round begin and end to stepsize
+        self.begin = round_time(begin, stepsize)
+        self.end = round_time(end, stepsize)
+        self.stepsize = stepsize
 
-        # Loop to create the ephemeris values for every time step
-        entries = int((self.end - self.begin).total_seconds() / self.stepsize + 1)
+        # Validate and process API call
+        if self.validate_get():
+            # Perform GET
+            self.get()
 
-        # Set up time arrays
-        self.timestamp = [
-            dtstart + timedelta(seconds=t * self.stepsize) for t in range(entries)
-        ]
+    def __len__(self) -> int:
+        return len(self.timestamp)
 
-        # Calculate GCRS position for Satellite
-        _, temes_p, temes_v = self.satellite.sgp4_array(
-            self.ap_times.jd1, self.ap_times.jd2
-        )
-        teme_p = CartesianRepresentation(temes_p.T * u.km)
-        if self.velocity is True:
-            # Calculate position with differentials, so satellite velocity can be determined
-            teme_v = CartesianDifferential(temes_v.T * u.km / u.s)
-            teme = TEME(teme_p.with_differentials(teme_v), obstime=self.ap_times)
-        else:
-            # Just calculate satellite positions (~5x faster)
-            teme = TEME(teme_p.without_differentials(), obstime=self.ap_times)
-        self.gcrs = teme.transform_to(GCRS(obstime=self.ap_times))
+    def ephindex(self, t: Time) -> int:
+        """
+        For a given time, return an index for the nearest time in the
+        ephemeris. Note that internally converting from Time to datetime makes
+        this run way faster.
 
-        # Calculate posvec
-        self.posvec = self.gcrs.cartesian.xyz.to(u.km).value.T
+        Parameters
+        ----------
+        t
+            The time to find the nearest index for.
 
-        # Moonvec
-        moon = get_body("moon", self.ap_times)
+        Returns
+        -------
+            The index of the nearest time in the ephemeris.
+        """
+        return int(np.argmin(np.abs((self.timestamp.datetime - t.datetime))))
 
-        # Use apparent position of the Moon?
-        if self.apparent:
-            moon = moon.tete
-        self.moonvec = moon.cartesian.xyz.to(u.km).value.T
+    @cached_property
+    def beta(self) -> np.ndarray:
+        """
+        Return spacecraft beta angle (angle between the plane of the orbit
+        and the plane of the Sun).
 
-        # Sunvec
-        sun = get_body("sun", self.ap_times)
+        Returns
+        -------
+            The beta angle of the spacecraft.
+        """
+        return self.pole.separation(self.sun) - 90 * u.deg
 
-        # Use apparent position of the Moon?
-        if self.apparent:
-            sun = sun.tete
-        self.sunvec = sun.cartesian.xyz.to(u.km).value.T
+    @cached_property
+    def ineclipse(self) -> np.ndarray:
+        """
+        Is the spacecraft in an Earth eclipse? Defined as when the Sun > 50%
+        behind the Earth.
 
-        # Calculate Latitude/Longitude of spacecraft over Earth
-        # This method calculates the alt/az of the spacecraft as viewed
-        # from the center of the Earth. This matches lat/long well enough
-        # for the purpose we need it: Determining if we're in the SAA.
-        # Accurate to within ~5 arcminutes in latitude and 0.25 arcminutes
-        # in longitude (latitude variance due to Earth not being spherical)
-        # FIXME: Proper calculation of Lat/Lon of point below spacecraft using WGS84
-        earth_centered_frame = AltAz(
-            obstime=self.ap_times,
-            location=EarthLocation.from_geocentric(0, 0, 0, unit="m"),
-        )
-        lon_lat_dist = SkyCoord(self.gcrs).transform_to(earth_centered_frame).spherical
-        self.longitude = 180 - lon_lat_dist.lon.deg
-        self.latitude = lon_lat_dist.lat.deg
-
-        # Calculate Angular size of Earth in degrees, note assumes Earth is spherical
-        earth_distance = lon_lat_dist.distance.to(u.km).value
-        self.earthsize = np.degrees(np.arcsin(EARTH_RADIUS / earth_distance))
-
-        # Calculate velocity components, if we want them
-        if self.velocity:
-            # Calculate velocity vector
-            self.velvec = self.gcrs.velocity.d_xyz.to(u.km / u.s).value.T
-
-            # Calculate orbit pole vector
-            _, uposvec = pn(self.posvec)
-            _, uvelvec = pn(self.velvec)
-            # The pole vector is the cross product of the unit position and velocity vectors
-            # Uses erfa pxp function, which is a bit faster than numpy cross
-            self.polevec = pxp(uposvec, uvelvec)
-
-        return True
+        Returns
+        -------
+            A boolean array indicating if the spacecraft is in eclipse.
+        """
+        return self.earth.separation(self.sun) < self.earthsize
 
     def get(self) -> bool:
+        """
+        Compute the ephemeris for the specified time range with at a
+        time resolution given by self.stepsize.
+
+        Note only calculates Spacecraft position, velocity,
+        Sun/Moon position and latitude/longitude of the spacecraft
+        initially.
+
+        Returns
+        -------
+            True if successful, False if not.
+        """
+
         # Check if all parameters are valid
-        if self.validate_get():
+        if not self.validate_get():
             # Compute Ephemeris
-            self.compute()
-            return True
-        else:
             return False
+
+        # Check the TLE is available
+        if self.tle is None:
+            raise HTTPException(
+                status_code=404, detail="No TLE available for this epoch"
+            )
+
+        # Set up time array by default include a point for the end value also
+        self.timestamp = Time(
+            np.arange(self.begin, self.end + self.stepsize, self.stepsize)
+        )
+
+        # Set up EarthLocation mimic
+        satloc = EarthSatelliteLocation.from_tle(self.tle, obstime=self.timestamp)
+
+        # Calculate satellite position vector as array of x,y,z vectors in
+        # units of km, and velocity vector as array of x,y,z vectors in units of km/s
+        self.posvec, self.velvec = satloc.get_gcrs_posvel(self.timestamp)
+
+        # Calculate the position of the Moon relative to the spacecraft
+        self.moon = get_body("moon", self.timestamp, location=satloc)
+
+        # Calculate the position of the Moon relative to the spacecraft
+        self.sun = get_body("sun", self.timestamp, location=satloc)
+
+        # Calculate the position of the Earth relative to the spacecraft
+        self.earth = get_body("earth", self.timestamp, location=satloc)
+
+        # Calculate the latitude, longitude and distance from the center of the
+        # Earth of the satellite
+        self.longitude = satloc.lon
+        self.latitude = satloc.lat
+        dist = self.posvec.norm()
+
+        # Calculate the Earth radius in degrees
+        if self.earth_radius is not None:
+            self.earthsize = self.earth_radius * np.ones(len(self))
+        else:
+            self.earthsize = np.arcsin(EARTH_RADIUS / dist)
+
+        # Calculate orbit pole vector
+        polevec = self.posvec.cross(self.velvec)
+        self.pole = SkyCoord(polevec / polevec.norm())
+
+        return True
