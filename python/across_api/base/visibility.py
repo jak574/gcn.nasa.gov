@@ -6,8 +6,7 @@ import numpy as np
 from astropy.coordinates import SkyCoord  # type: ignore
 from astropy.time import Time  # type: ignore
 
-from ..base.common import round_time
-from .common import ACROSSAPIBase
+from .common import ACROSSAPIBase, round_time
 from .ephem import EphemBase
 from .saa import SAABase
 from .schema import VisibilityGetSchema, VisibilitySchema, VisWindow
