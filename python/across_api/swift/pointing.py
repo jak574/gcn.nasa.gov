@@ -2,8 +2,9 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from datetime import datetime, timedelta
 
+import astropy.units as u  # type: ignore
+from astropy.time import Time  # type: ignore
 from fastapi import HTTPException
 
 from ..base.config import set_observatory
@@ -21,9 +22,9 @@ class SwiftPointing(PointingBase):
 
     Parameters
     ----------
-    begin : datetime
+    begin : Time
         Start time of pointing search
-    end : datetime
+    end : Time
         End time of pointing search
     stepsize : int
         Step size in seconds for pointing calculations
@@ -39,7 +40,7 @@ class SwiftPointing(PointingBase):
     _schema = SwiftPointingSchema
     _get_schema = SwiftPointingGetSchema
 
-    def __init__(self, begin: datetime, end: datetime, stepsize: int = 60):
+    def __init__(self, begin: Time, end: Time, stepsize: u.Quantity = 60 * u.s):
         self.begin = begin
         self.end = end
         self.stepsize = stepsize
@@ -88,7 +89,7 @@ class SwiftPointing(PointingBase):
                 # Check if the spacecraft is slewing, if yes, then the spacecraft is not observing
                 observing = True
                 if hasattr(ent, "slew"):
-                    if t < ent.begin + timedelta(seconds=ent.slew):
+                    if t < ent.begin + ent.slew:
                         observing = False
 
                 # Add the entry to the list

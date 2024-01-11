@@ -2,9 +2,10 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from datetime import datetime
 from typing import Optional
 
+import astropy.units as u  # type: ignore
+from astropy.time import Time  # type: ignore
 from shapely.geometry import Point, Polygon  # type: ignore
 
 from ..base.config import set_observatory
@@ -311,16 +312,16 @@ class SwiftSAA(SAABase):
     # Internal things
     saa = SwiftSAAPolygon()
     ephem: SwiftEphem
-    begin: datetime
-    end: datetime
+    begin: Time
+    end: Time
     stepsize: int
 
     def __init__(
         self,
-        begin: datetime,
-        end: datetime,
+        begin: Time,
+        end: Time,
         ephem: Optional[SwiftEphem] = None,
-        stepsize: int = 60,
+        stepsize: u.Quantity = 60 * u.s,
     ):
         # Attributes
 
@@ -343,13 +344,13 @@ class SwiftSAA(SAABase):
             self.get()
 
     @classmethod
-    def insaa(cls, dttime: datetime) -> bool:
+    def insaa(cls, dttime: Time) -> bool:
         """
-        For a given datetime, are we in the SAA?
+        For a given Time, are we in the SAA?
 
         Parameters
         ----------
-        dttime : datetime
+        dttime : Time
             Time at which to calculate if we're in SAA
 
         Returns

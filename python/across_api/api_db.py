@@ -5,7 +5,7 @@
 import numpy as np
 from sqlalchemy.sql.functions import Function, func
 from sqlalchemy import create_engine
-from sqlalchemy.orm.decl_api import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase  # type: ignore
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 
 from .api_secrets import (
