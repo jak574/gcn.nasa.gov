@@ -12,7 +12,6 @@ sgp4
 cachetools
 shapely
 python-multipart
-xmltodict
 sgp4
 spacetrack
 psycopg2-binary
