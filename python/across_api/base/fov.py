@@ -1,7 +1,3 @@
-# Copyright © 2023 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
-# All Rights Reserved.
-
 from datetime import datetime
 from typing import Optional, Union
 
@@ -15,8 +11,7 @@ from astropy.io import fits  # type: ignore
 from erfa import pdp  # type: ignore
 from fastapi import HTTPException
 
-from ..base.common import round_time
-from .common import ACROSSAPIBase
+from .common import ACROSSAPIBase, round_time
 from .ephem import EphemBase
 from .pointing import PointingBase
 from .schema import ConfigSchema, FOVOffsetSchema, PointBase
@@ -36,11 +31,11 @@ class FOVBase(ACROSSAPIBase):
 
         Parameters
         ----------
-        sc_ra : Optional[float], optional
+        sc_ra
             Spacecraft pointing Right Ascension in decimal degrees, by default None
-        sc_dec : Optional[float], optional
+        sc_dec
             Spacecraft pointing Declination in decimal degrees, by default None
-        sc_roll : Optional[float], optional
+        sc_roll
             Spacecraft pointing Roll in decimal degrees, by default None
 
         Returns
@@ -102,9 +97,9 @@ class FOVBase(ACROSSAPIBase):
 
         Parameters
         ----------
-        ra : float
+        ra
             Right Ascenscion ICRS decimal degrees
-        dec : float
+        dec
             Declination ICRS decimal degrees
 
         Returns
@@ -152,28 +147,22 @@ class FOVBase(ACROSSAPIBase):
         dec: Union[float, list, np.ndarray, Longitude, None] = None,
         skycoord: Optional[SkyCoord] = None,
         earth: Optional[SkyCoord] = None,
-        earth_ra: Optional[float] = None,
-        earth_dec: Optional[float] = None,
-        earth_size: Union[float, u.Quantity, None] = None,
+        earth_size: Optional[u.Quantity] = None,
     ) -> Union[bool, np.ndarray]:
         """
         Check if a celestial object is occulted by the Earth.
 
         Parameters
         ----------
-        ra : float, list, np.ndarray, Latitude, None
+        ra
             Right ascension of the celestial object.
-        dec : float, list, np.ndarray, Longitude, None
+        dec
             Declination of the celestial object.
         skycoord: SkyCoord, optional
             SkyCoord object representing the celestial object.
-        earth : SkyCoord, optional
+        earth
             SkyCoord object representing the Earth.
-        earth_ra : float, optional
-            Right ascension of the Earth.
-        earth_dec : float, optional
-            Declination of the Earth.
-        earth_size : float, u.Quantity, None
+        earth_size
             Angular size of the Earth.
 
         Returns
@@ -183,10 +172,6 @@ class FOVBase(ACROSSAPIBase):
         """
         if ra is not None and dec is not None:
             skycoord = SkyCoord(ra, dec, unit="deg")
-        if earth_ra is not None and earth_dec is not None:
-            earth = SkyCoord(earth_ra, earth_dec, unit="deg")
-        if type(earth_size) is not u.Quantity and earth_size is not None:
-            earth_size = earth_size * u.deg
         if earth is not None and earth_size is not None and skycoord is not None:
             return skycoord.separation(earth) < earth_size
         return False
@@ -196,10 +181,8 @@ class FOVBase(ACROSSAPIBase):
         ra: Optional[float] = None,
         dec: Optional[float] = None,
         skycoord: Optional[SkyCoord] = None,
-        earth_ra: Optional[float] = None,
-        earth_dec: Optional[float] = None,
         earth: Optional[SkyCoord] = None,
-        earth_size: Union[float, u.Quantity, None] = None,
+        earth_size: Optional[u.Quantity] = None,
     ) -> Union[bool, np.ndarray]:
         """
         Given the current spacecraft pointing, is the target at the
@@ -209,19 +192,15 @@ class FOVBase(ACROSSAPIBase):
 
         Parameters
         ----------
-        ra : float
+        ra
             Right Asc_enscion ICRS decimal degrees
-        dec : float
+        dec
             Declination ICRS decimal degrees
         skycoord: SkyCoord, optional
             SkyCoord object representing the celestial object.
-        earth : SkyCoord, optional
+        earth
             SkyCoord object representing the Earth.
-        earth_ra : float, optional
-            Right ascension of the Earth.
-        earth_dec : float, optional
-            Declination of the Earth.
-        earth_size : float, u.Quantity, None
+        earth_size
             Angular size of the Earth (default degrees if float).
 
         Returns
@@ -235,8 +214,6 @@ class FOVBase(ACROSSAPIBase):
             dec=dec,
             skycoord=skycoord,
             earth=earth,
-            earth_ra=earth_ra,
-            earth_dec=earth_dec,
             earth_size=earth_size,
         )
         return np.logical_not(earth_occultation)
@@ -246,30 +223,28 @@ class FOVBase(ACROSSAPIBase):
         healpix_loc: np.ndarray,
         healpix_nside: Optional[int] = None,
         healpix_order: str = "NESTED",
-        earth_ra: Optional[float] = None,
-        earth_dec: Optional[float] = None,
-        earth_size: Optional[float] = None,
+        earth: Optional[SkyCoord] = None,
+        earth_size: Optional[u.Quantity] = None,
     ) -> float:
         """
-        Calculates the amount of probability inside the field of view (FOV) defined by the given parameters.
+        Calculates the amount of probability inside the field of view (FOV)
+        defined by the given parameters.
 
         Parameters
         ----------
-        healpix_loc : np.ndarray
+        healpix_loc
             An array containing the probability density values for each HEALpix
             pixel.
-        healpix_nside : int
+        healpix_nside
             The NSIDE value of the HEALpix map. If not provided, it will be
             calculated based on the length of healpix_loc.
-        healpix_order : str
+        healpix_order
             The ordering scheme of the HEALpix map. Default is "NESTED".
-        earth_ra : float
-            The right ascension of the Earth's center in degrees. If provided
-            along with earth_dec and earth_size, it will be used to remove
-            Earth occulted pixels from the FOV.
-        earth_dec : float
-            The declination of the Earth's center in degrees.
-        earth_size : float
+        earth
+            SkyCoord of the Earth's center in degrees. If provided along with
+            earth_size, it will be used to remove Earth occulted pixels from
+            the FOV.
+        earth_size
             The size of the Earth in degrees.
 
         Returns
@@ -277,11 +252,13 @@ class FOVBase(ACROSSAPIBase):
         float
             The amount of probability inside the FOV.
 
-        Note:
-        - This method assumes that the spacecraft's pointing direction is defined by self.sc_ra and self.sc_dec attributes.
-        - If self.sc_ra or self.sc_dec is None, it returns 0.
-        - If healpix_order is "NUNIQ", it assumes that healpix_loc contains UNIQ values and converts them to level and ipix values.
-        - If earth_ra, earth_dec, and earth_size are provided, it removes Earth occulted pixels from the FOV before calculating the probability.
+        Note: - This method assumes that the spacecraft's pointing direction is
+        defined by self.sc_ra and self.sc_dec attributes. - If self.sc_ra or
+        self.sc_dec is None, it returns 0. - If healpix_order is "NUNIQ", it
+        assumes that healpix_loc contains UNIQ values and converts them to
+        level and ipix values. - If earth and earth_size are
+        provided, it removes Earth occulted pixels from the FOV before
+        calculating the probability.
         """
         # Check if we're pointing
         if self.sc_ra is None or self.sc_dec is None:
@@ -315,16 +292,9 @@ class FOVBase(ACROSSAPIBase):
         # Convert these coordinates into a SkyCoord
         skycoord = SkyCoord(ra=ra, dec=dec, unit="deg")
 
-        # Remove pixels that are Earth occulted
-        if earth_ra is not None and earth_dec is not None and earth_size is not None:
-            # Earth coordinate skycoord
-            earth_skycoord = SkyCoord(ra=earth_ra, dec=earth_dec, unit="deg")
-        else:
-            earth_skycoord = None
-
         # Calculate pixel values of the all the regions inside of the FOV
         visible_pixels = nonzero_prob_pixels[
-            self.infov(skycoord=skycoord, earth=earth_skycoord, earth_size=earth_size)
+            self.infov(skycoord=skycoord, earth=earth, earth_size=earth_size)
         ]
 
         if healpix_order == "NUNIQ":
@@ -381,7 +351,7 @@ class HealFOV(FOVBase):
 
         Parameters
         ----------
-        filename : str
+        filename
             Healpix FITS file to load
 
         Returns
@@ -401,9 +371,9 @@ class HealFOV(FOVBase):
 
         Parameters
         ----------
-        ra : float
+        ra
             Right Asc_enscion ICRS decimal degrees
-        dec : float
+        dec
             Declination ICRS decimal degrees
 
         Returns
@@ -430,29 +400,23 @@ class HealFOV(FOVBase):
         ra: Optional[float] = None,
         dec: Optional[float] = None,
         skycoord: Optional[SkyCoord] = None,
-        earth_ra: Optional[float] = None,
-        earth_dec: Optional[float] = None,
         earth: Optional[SkyCoord] = None,
-        earth_size: Union[float, u.Quantity, None] = None,
+        earth_size: Optional[u.Quantity] = None,
     ) -> Union[bool, np.ndarray]:
         """Is given the current spacecraft pointing, is the target at the
         given coordinates inside the FOV.
 
         Parameters
         ----------
-        ra : float
+        ra
             Right Asc_enscion ICRS decimal degrees
-        dec : float
+        dec
             Declination ICRS decimal degrees
         skycoord: SkyCoord, optional
             SkyCoord object representing the celestial object.
-        earth : SkyCoord, optional
+        earth
             SkyCoord object representing the Earth.
-        earth_ra : float, optional
-            Right ascension of the Earth.
-        earth_dec : float, optional
-            Declination of the Earth.
-        earth_size : float, u.Quantity, None
+        earth_size
             Angular size of the Earth (default degrees if float).
 
         Returns
@@ -466,8 +430,6 @@ class HealFOV(FOVBase):
             dec=dec,
             skycoord=skycoord,
             earth=earth,
-            earth_ra=earth_ra,
-            earth_dec=earth_dec,
             earth_size=earth_size,
         )
 
@@ -491,13 +453,13 @@ class CircularFOV(FOVBase):
 
     Parameters
     ----------
-    radius : float
+    radius
         Radius of the FOV in decimal degrees
-    sc_ra : float
+    sc_ra
         Spacecraft pointing Right Ascension in decimal degrees
-    sc_dec : float
+    sc_dec
         Spacecraft pointing Right Ascension in decimal degrees
-    sc_roll : float
+    sc_roll
         Spacecraft pointing Right Ascension in decimal degrees
     """
 
@@ -520,29 +482,23 @@ class CircularFOV(FOVBase):
         ra: Optional[float] = None,
         dec: Optional[float] = None,
         skycoord: Optional[SkyCoord] = None,
-        earth_ra: Optional[float] = None,
-        earth_dec: Optional[float] = None,
         earth: Optional[SkyCoord] = None,
-        earth_size: Union[float, u.Quantity, None] = None,
+        earth_size: Optional[u.Quantity] = None,
     ) -> Union[bool, np.ndarray]:
         """Is given the current spacecraft pointing, is the target at the
         given coordinates inside the FOV.
 
         Parameters
         ----------
-        ra : float
+        ra
             Right Asc_enscion ICRS decimal degrees
-        dec : float
+        dec
             Declination ICRS decimal degrees
         skycoord: SkyCoord, optional
             SkyCoord object representing the celestial object.
-        earth : SkyCoord, optional
+        earth
             SkyCoord object representing the Earth.
-        earth_ra : float, optional
-            Right ascension of the Earth.
-        earth_dec : float, optional
-            Declination of the Earth.
-        earth_size : float, u.Quantity, None
+        earth_size
             Angular size of the Earth (default degrees if float).
 
         Returns
@@ -556,8 +512,6 @@ class CircularFOV(FOVBase):
             dec=dec,
             skycoord=skycoord,
             earth=earth,
-            earth_ra=earth_ra,
-            earth_dec=earth_dec,
             earth_size=earth_size,
         )
 
@@ -600,14 +554,14 @@ class SquareFOV(FOVBase):
 
     Parameters
     ----------
-    size : float
+    size
         angular size of the square FOV in decimal degrees,
         this is the angular size of one side of the square.
-    sc_ra : float
+    sc_ra
         Spacecraft pointing Right Ascension in decimal degrees
-    sc_dec : float
+    sc_dec
         Spacecraft pointing Right Ascension in decimal degrees
-    sc_roll : float
+    sc_roll
         Spacecraft pointing Right Ascension in decimal degrees
     """
 
@@ -630,10 +584,8 @@ class SquareFOV(FOVBase):
         ra: Optional[float] = None,
         dec: Optional[float] = None,
         skycoord: Optional[SkyCoord] = None,
-        earth_ra: Optional[float] = None,
-        earth_dec: Optional[float] = None,
         earth: Optional[SkyCoord] = None,
-        earth_size: Union[float, u.Quantity, None] = None,
+        earth_size: Optional[u.Quantity] = None,
     ) -> Union[bool, np.ndarray]:
         """
         Given the current spacecraft pointing, is the target at the
@@ -642,19 +594,15 @@ class SquareFOV(FOVBase):
 
         Parameters
         ----------
-        ra : float
+        ra
             Right Asc_enscion ICRS decimal degrees
-        dec : float
+        dec
             Declination ICRS decimal degrees
         skycoord: SkyCoord, optional
             SkyCoord object representing the celestial object.
-        earth : SkyCoord, optional
+        earth
             SkyCoord object representing the Earth.
-        earth_ra : float, optional
-            Right ascension of the Earth.
-        earth_dec : float, optional
-            Declination of the Earth.
-        earth_size : float, u.Quantity, None
+        earth_size
             Angular size of the Earth (default degrees if float).
 
         Returns
@@ -668,8 +616,6 @@ class SquareFOV(FOVBase):
             dec=dec,
             skycoord=skycoord,
             earth=earth,
-            earth_ra=earth_ra,
-            earth_dec=earth_dec,
             earth_size=earth_size,
         )
 
@@ -739,31 +685,31 @@ class FOVCheckBase(ACROSSAPIBase):
 
     Attributes
     ----------
-    fov : FOVBase
+    fov
         Instrument FOV
-    ephem : EphemBase
+    ephem
         Ephemeris
-    ra : float
+    ra
         Right Ascension in decimal degrees
-    dec : float
+    dec
         Declination in decimal degrees
-    pointings : PointingBase
+    pointings
         Pointing information
-    earthoccult : bool
+    earthoccult
         Calculate Earth occultation (default: True)
-    stepsize : int
+    stepsize
         Step size in seconds for visibility calculations
-    entries : list
+    entries
         List of FOV check entries
-    status : JobInfo
+    status
         Status of FOV check query
-    config : ConfigSchema
+    config
         Configuration schema
-    instrument : str
+    instrument
         Instrument name
-    healpix_loc : np.ndarray
+    healpix_loc
         HEALpix map
-    healpix_order : str
+    healpix_order
         HEALpix ordering scheme
     """
 
@@ -791,16 +737,14 @@ class FOVCheckBase(ACROSSAPIBase):
         # FIXME: Should parallelize this?
         for point in self.entries:
             # Where are we in the ephemeris?
-            ephindex = self.ephem.ephindex(point.time)
+            ephindex = self.ephem.ephindex(point.timestamp)
 
             # Calculate the Earth RA/Dec and size at this time
             if self.earthoccult:
-                earth_ra = self.ephem.earth_ra[ephindex]
-                earth_dec = self.ephem.earth_dec[ephindex]
+                earth = self.ephem.earth[ephindex]
                 earth_size = self.ephem.earthsize[ephindex]
             else:
-                earth_ra = None
-                earth_dec = None
+                earth = None
                 earth_size = None
 
             # Set the Spacecraft pointing direction
@@ -811,14 +755,13 @@ class FOVCheckBase(ACROSSAPIBase):
                 point.infov = self.fov.infov_hp(
                     healpix_loc=self.healpix_loc,
                     healpix_order=self.healpix_order,
-                    earth_ra=earth_ra,
-                    earth_dec=earth_dec,
+                    earth=earth,
                     earth_size=earth_size,
                 )
             else:
                 # Is the target inside the FOV?
                 point.infov = self.fov.infov(
-                    self.ra, self.dec, earth_ra, earth_dec, earth_size
+                    ra=self.ra, dec=self.dec, earth=earth, earth_size=earth_size
                 )
 
     def infov(self, trigger_time: datetime) -> Union[bool, PointBase]:
@@ -828,7 +771,7 @@ class FOVCheckBase(ACROSSAPIBase):
 
         Parameters
         ----------
-        trigger_time : datetime
+        trigger_time
             Time at which to calculate if we're in FOV
 
         Returns
@@ -853,7 +796,7 @@ class FOVCheckBase(ACROSSAPIBase):
 
         Parameters
         ----------
-        fovschema : FOVSchema
+        fovschema
             FOV schema
 
         Returns

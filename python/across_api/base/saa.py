@@ -1,10 +1,8 @@
-# Copyright © 2023 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
-# All Rights Reserved.
-
-from datetime import datetime
+from functools import cached_property
 from typing import Optional
 
+import astropy.units as u  # type: ignore
+from astropy.time import Time  # type: ignore
 from shapely import Point, Polygon  # type: ignore
 
 from .common import ACROSSAPIBase
@@ -19,9 +17,9 @@ class SAAPolygonBase:
 
     Attributes
     ----------
-    points : list
+    points
         List of points defining the SAA polygon.
-    saapoly : Polygon
+    saapoly
         Shapely Polygon object defining the SAA polygon.
 
     """
@@ -55,29 +53,29 @@ class SAABase(ACROSSAPIBase, MakeWindowBase):
 
     Attributes
     ----------
-    begin : datetime
+    begin
         Start time of SAA search
-    end : datetime
+    end
         End time of SAA search
-    ephem : Optional[Ephem]
+    ephem
         Ephem object to use for SAA calculations
-    saa : SAAPolygonBase
+    saa
         SAA Polygon object to use for SAA calculations
-    status : JobInfo
+    status
         Status of SAA query
     """
 
     _schema = SAASchema
     _get_schema = SAAGetSchema
 
-    begin: datetime
-    end: datetime
+    begin: Time
+    end: Time
 
     # Internal things
     saa: SAAPolygonBase
     ephem: EphemBase
 
-    stepsize: int
+    stepsize: u.Quantity
     _insaacons: Optional[list]
     entries: Optional[list]  # type: ignore
 
@@ -102,23 +100,23 @@ class SAABase(ACROSSAPIBase, MakeWindowBase):
 
     def insaawindow(self, dttime):
         """
-        Check if the given datetime falls within any of the SAA windows in list.
+        Check if the given Time falls within any of the SAA windows in list.
 
         Arguments
         ---------
-        dttime : datetime
-            The datetime to check.
+        dttime : Time
+            The Time to check.
 
         Returns
         -------
         bool
-            True if the datetime falls within any SAA window, False otherwise.
+            True if the Time falls within any SAA window, False otherwise.
         """
         return True in [
             True for win in self.entries if dttime >= win.begin and dttime <= win.end
         ]
 
-    @property
+    @cached_property
     def insaacons(self) -> list:
         """
         Calculate SAA constraint using SAA Polygon
@@ -129,15 +127,7 @@ class SAABase(ACROSSAPIBase, MakeWindowBase):
             List of booleans indicating if the spacecraft is in the SAA
 
         """
-        if self._insaacons is None:
-            if self.entries is None:
-                self._insaacons = [
-                    self.saa.insaa(self.ephem.longitude[i], self.ephem.latitude[i])
-                    for i in range(len(self.ephem))
-                ]
-            else:
-                ephstart = self.ephem.ephindex(self.begin)
-                ephstop = self.ephem.ephindex(self.end) + 1
-                times = self.ephem.timestamp[ephstart:ephstop]
-                self._insaacons = [self.insaawindow(t) for t in times]
-        return self._insaacons
+        return [
+            self.saa.insaa(self.ephem.longitude[i].deg, self.ephem.latitude[i].deg)
+            for i in range(len(self.ephem))
+        ]
