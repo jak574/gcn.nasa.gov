@@ -12,7 +12,7 @@ from datetime import datetime
 from .ephem import NuSTAREphem
 
 
-class NUSTARSAAPolygon(SAAPolygonBase):
+class NuSTARSAAPolygon(SAAPolygonBase):
     """Class to define the NUSTAR SAA polygon.
 
     Attributes
@@ -45,6 +45,7 @@ class NUSTARSAAPolygon(SAAPolygonBase):
 
 @set_observatory(NUSTAR)
 class NuSTARSAA(SAABase):
+<<<<<<< HEAD
     """Class to calculate NuSTAR SAA entries.
 
     Parameters
@@ -64,9 +65,13 @@ class NuSTARSAA(SAABase):
         List of SAA entries
     status : JobInfo
         Status of SAA query
+=======
+    """
+    Class to calculate NUSTAR SAA passages.
+>>>>>>> 0628e39 (Fix class name)
     """
 
-    saa = NUSTARSAAPolygon()
+    saa = NuSTARSAAPolygon()
     ephemclass = NuSTAREphem
 
     # Internal things
