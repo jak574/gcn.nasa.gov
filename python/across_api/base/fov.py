@@ -10,8 +10,8 @@ import numpy as np
 from astropy.coordinates import CartesianRepresentation  # type: ignore
 from astropy.coordinates import Latitude, Longitude, SkyCoord
 from astropy.coordinates.matrix_utilities import rotation_matrix  # type: ignore
-from astropy.time import Time  # type: ignore
 from astropy.io import fits  # type: ignore
+from astropy.time import Time  # type: ignore
 from erfa import pdp  # type: ignore
 from fastapi import HTTPException
 

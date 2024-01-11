@@ -6,7 +6,6 @@
 import astropy.units as u  # type: ignore
 from astropy.time import Time  # type: ignore
 from fastapi import HTTPException
-
 from python.across_api.base.schema import PointSchema
 
 from ..base.config import set_observatory
