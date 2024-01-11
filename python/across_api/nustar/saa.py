@@ -11,7 +11,7 @@ from .config import NUSTAR
 from .ephem import NuSTAREphem
 
 
-class NUSTARSAAPolygon(SAAPolygonBase):
+class NuSTARSAAPolygon(SAAPolygonBase):
     """Class to define the NUSTAR SAA polygon.
 
     Attributes
@@ -43,12 +43,12 @@ class NUSTARSAAPolygon(SAAPolygonBase):
 
 
 @set_observatory(NUSTAR)
-class NUSTARSAA(SAABase):
+class NuSTARSAA(SAABase):
     """
     Class to calculate NUSTAR SAA passages.
     """
 
-    saa = NUSTARSAAPolygon()
+    saa = NuSTARSAAPolygon()
     ephemclass = NuSTAREphem
 
     def __init__(self, begin, end, ephem=None, stepsize=60 * u.s):
