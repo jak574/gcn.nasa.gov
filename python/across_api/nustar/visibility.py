@@ -79,7 +79,3 @@ class NuSTARVisibility(VisibilityBase, ACROSSAPIBase):
             self.ephem = Ephem(begin=daybegin, end=dayend, stepsize=self.stepsize)
             self.saa = SAA(begin=daybegin, end=dayend, ephem=self.ephem)
             self.get()
-
-
-# NuSTAR specific aliases for classes
-Visibility = NuSTARVisibility
