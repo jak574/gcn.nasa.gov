@@ -40,6 +40,18 @@ class TLEBase(ACROSSAPIBase):
         TLE entry for given epoch
     offset
         Offset between TLE epoch and requested epoch in days
+    tle_name
+        Name of the spacecraft as it appears in the Spacecraft Catalog.
+    tle_url
+        URL to retrieve the TLE from.
+    tle_concat
+        URL to retrieve the TLE from in concatenated format.
+    tle_bad
+        If the TLE is this many days old, it is considered outdated, and a new
+        TLE will be retrieved.
+    tle_min_epoch
+        Minimum epoch for which TLEs are available, typically this will
+        correspond to a date after the launch of the spacecraft.
 
     Methods
     -------
