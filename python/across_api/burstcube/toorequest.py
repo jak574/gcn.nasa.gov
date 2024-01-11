@@ -15,6 +15,7 @@ from ..across.user import check_api_key
 from arc import tables  # type: ignore
 from ..base.common import ACROSSAPIBase
 from ..base.config import set_observatory
+from ..base.schema import AstropySeconds
 from ..burstcube.fov import BurstCubeFOVCheck
 from ..functions import round_time
 from .config import BURSTCUBE
