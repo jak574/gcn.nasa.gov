@@ -21,12 +21,6 @@ class FermiEphem(EphemBase, ACROSSAPIBase):
     Satellite from TLE.
     """
 
-    # Configuration options
-    earth_radius = 70 * u.deg  # Fix 70 degree Earth radius
-
     def __init__(self, begin: Time, end: Time, stepsize: u.Quantity = 60 * u.s):
         self.tle = FermiTLE(begin).tle
         super().__init__(begin=begin, end=end, stepsize=stepsize)
-
-
-Ephem = FermiEphem

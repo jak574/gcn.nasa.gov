@@ -1,10 +1,15 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 import re
-from datetime import datetime, timedelta
 from typing import Union
 
+import astropy.units as u  # type: ignore
 import numpy as np
 import requests
 from astropy.io import fits  # type: ignore
+from astropy.time import Time  # type: ignore
 from fastapi import HTTPException
 
 from ..base.config import set_observatory
@@ -13,23 +18,22 @@ from .config import FERMI
 from .schema import FermiPoint, FermiPointingGetSchema, FermiPointingSchema
 
 
-def datetime_from_year_and_day(year: int, day_of_year: int) -> datetime:
-    start_date = datetime(year, 1, 1)  # Start with the first day of the given year
-    result_date = start_date + timedelta(
-        days=day_of_year - 1
-    )  # Subtract 1 since day_of_year is 1-indexed
+def time_from_year_and_day(year: int, day_of_year: int) -> Time:
+    start_date = Time(f"{year}-01-01")  # Start with the first day of the given year
+    result_date = start_date + (day_of_year - 1) * u.day
+    # Subtract 1 since day_of_year is 1-indexed
     return result_date
 
 
-def fermi_met_to_datetime(met: float) -> datetime:
-    return datetime(2001, 1, 1) + timedelta(seconds=met)
+def fermi_met_to_time(met: float) -> Time:
+    return Time("2001-01-01") + met * u.s
 
 
-def datetime_to_fermi_met(dt: datetime) -> float:
-    return dt.timestamp() - datetime(2001, 1, 1).timestamp()
+def time_to_fermi_met(dt: Time) -> float:
+    return dt.unix - Time("2001-01-01").unix
 
 
-def latestfermi(starttime: datetime) -> Union[str, bool]:
+def latestfermi(starttime: Time) -> Union[str, bool]:
     """Fetch the most relevant Fermi FT2 file from their website"""
 
     tcedir = "http://fermi.gsfc.nasa.gov/ssc/resources/timeline/ft2/files/"
@@ -48,8 +52,8 @@ def latestfermi(starttime: datetime) -> Union[str, bool]:
                     startday = int(vals[4][4:7])
                     endyear = int(vals[5][0:4])
                     endday = int(vals[5][4:7])
-                    afststart = datetime_from_year_and_day(startyear, startday)
-                    afstend = datetime_from_year_and_day(endyear, endday)
+                    afststart = time_from_year_and_day(startyear, startday)
+                    afstend = time_from_year_and_day(endyear, endday)
                     backupafst = x[0]
                     if afststart <= starttime <= afstend:
                         filename = x[0]
@@ -65,7 +69,7 @@ class FermiPointing(PointingBase):
     _schema = FermiPointingSchema
     _get_schema = FermiPointingGetSchema
 
-    def __init__(self, begin: datetime, end: datetime, stepsize: int = 60):
+    def __init__(self, begin: Time, end: Time, stepsize: u.Quantity = 60 * u.s):
         self.begin = begin
         self.end = end
         self.stepsize = stepsize
@@ -96,23 +100,21 @@ class FermiPointing(PointingBase):
         self.hdu = fits.open(ft2file)
 
         # Calculate where in the FT2 file the period of interest lies
-        startmet = datetime_to_fermi_met(self.begin)
-        stopmet = datetime_to_fermi_met(self.end)
+        startmet = time_to_fermi_met(self.begin)
+        stopmet = time_to_fermi_met(self.end)
         startindex = np.where(self.hdu[1].data["START"] >= startmet)[0][0]
         stopindex = np.where(self.hdu[1].data["STOP"] <= stopmet)[0][-1]
 
         # Create the list of FermiPoints
         for i in range(startindex, stopindex):
-            t = fermi_met_to_datetime(self.hdu[1].data["START"][i])
+            t = fermi_met_to_time(self.hdu[1].data["START"][i])
             self.times.append(t)
             ra = self.hdu[1].data["RA_SCZ"][i]
             dec = self.hdu[1].data["DEC_SCZ"][i]
             self.entries.append(FermiPoint(timestamp=t, ra=ra, dec=dec, observing=True))
 
         # Set the stepsize, should be 60s for Fermi FT2 files
-        self.stepsize = int(
-            (self.entries[1].timestamp - self.entries[0].timestamp).total_seconds()
-        )
+        self.stepsize = self.entries[1].timestamp - self.entries[0].timestamp
 
         return True
 
