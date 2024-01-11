@@ -2,14 +2,11 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from typing import Optional
-
 import astropy.units as u  # type: ignore
-from astropy.time import Time  # type: ignore
 from shapely.geometry import Point, Polygon  # type: ignore
 
 from ..base.config import set_observatory
-from ..base.saa import SAABase, SAAGetSchema, SAAPolygonBase, SAASchema
+from ..base.saa import SAABase, SAAPolygonBase
 from .config import SWIFT
 from .ephem import Ephem
 from datetime import datetime
@@ -307,10 +304,6 @@ class SwiftSAA(SAABase):
         Info about SAA query
     """
 
-    _schema = SAASchema
-    _get_schema = SAAGetSchema
-
-    # Internal things
     saa = SwiftSAAPolygon()
     ephem: Ephem
     begin: datetime

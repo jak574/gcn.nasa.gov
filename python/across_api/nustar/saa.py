@@ -2,19 +2,18 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from datetime import datetime
-from typing import Optional
-
 from shapely.geometry import Polygon  # type: ignore
 
 from ..base.config import set_observatory
-from ..base.saa import SAABase, SAAGetSchema, SAAPolygonBase, SAASchema
+from ..base.saa import SAABase, SAAPolygonBase
 from .config import NUSTAR
 from .ephem import Ephem
+from datetime import datetime
+from .ephem import NuSTAREphem
 
 
-class NuSTARSAAPolygon(SAAPolygonBase):
-    """Class to define the NuSTAR SAA polygon.
+class NUSTARSAAPolygon(SAAPolygonBase):
+    """Class to define the NUSTAR SAA polygon.
 
     Attributes
     ----------
@@ -67,8 +66,8 @@ class NuSTARSAA(SAABase):
         Status of SAA query
     """
 
-    _schema = SAASchema
-    _get_schema = SAAGetSchema
+    saa = NUSTARSAAPolygon()
+    ephemclass = NuSTAREphem
 
     # Internal things
     saa = NuSTARSAAPolygon()

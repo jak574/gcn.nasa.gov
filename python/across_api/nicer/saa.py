@@ -2,17 +2,16 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from typing import Optional
 
-import astropy.units as u  # type: ignore
-from astropy.time import Time  # type: ignore
+from typing import Optional
 from shapely.geometry import Polygon  # type: ignore
 
 from ..base.config import set_observatory
-from ..base.saa import SAABase, SAAGetSchema, SAAPolygonBase, SAASchema
+from ..base.saa import SAABase, SAAPolygonBase
 from .config import NICER
 from .ephem import Ephem
-
+from datetime import datetime
+from astropy.time import Time  # type: ignore[import]
 
 class NICERSAAPolygon(SAAPolygonBase):
     """Class to define the NICER SAA polygon.
@@ -68,10 +67,6 @@ class NICERSAA(SAABase):
         Status of SAA query
     """
 
-    _schema = SAASchema
-    _get_schema = SAAGetSchema
-
-    # Internal things
     saa = NICERSAAPolygon()
     ephem: Ephem
     begin: datetime
@@ -88,7 +83,7 @@ class NICERSAA(SAABase):
         # Attributes
 
         self._insaacons: Optional[list] = None
-        self.entries = None
+        self.entries = []
 
         # Parameters
         self.begin = begin

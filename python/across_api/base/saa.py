@@ -1,5 +1,9 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from functools import cached_property
-from typing import Optional
+from typing import List, Optional
 
 import astropy.units as u  # type: ignore
 from astropy.time import Time  # type: ignore
@@ -13,7 +17,7 @@ from .window import MakeWindowBase
 
 class SAAPolygonBase:
     """
-    Simple class to define the Mission SAA Polygon.
+    Class to define the Mission SAA Polygon.
 
     Attributes
     ----------
@@ -49,18 +53,28 @@ class SAAPolygonBase:
 
 class SAABase(ACROSSAPIBase, MakeWindowBase):
     """
-    Base class for SAA calculations.
+    Class for SAA calculations.
 
-    Attributes
+    Parameters
     ----------
     begin
         Start time of SAA search
     end
         End time of SAA search
     ephem
-        Ephem object to use for SAA calculations
+        Ephem object to use for SAA calculations (optional, calculated if not
+        provided)
+    stepsize
+        Step size for SAA calculations
+
+    Attributes
+    ----------
     saa
         SAA Polygon object to use for SAA calculations
+    ephem
+        Ephem object to use for SAA calculations
+    entries
+        List of SAA entries
     status
         Status of SAA query
     """
@@ -73,24 +87,41 @@ class SAABase(ACROSSAPIBase, MakeWindowBase):
 
     # Internal things
     saa: SAAPolygonBase
-    ephem: EphemBase
 
     stepsize: u.Quantity
-    _insaacons: Optional[list]
-    entries: Optional[list]  # type: ignore
+    entries: List[SAAEntry]  # type: ignore
+
+    def __init__(
+        self,
+        begin: Time,
+        end: Time,
+        ephem: Optional[EphemBase] = None,
+        stepsize: u.Quantity = 60 * u.s,
+    ):
+        """
+        Initialize the SAA class.
+        """
+        # Parse parameters
+        self.begin = begin
+        self.end = end
+        self.stepsize = stepsize
+        if ephem is not None:
+            self.ephem = ephem
+            # Make sure stepsize matches supplied ephemeris
+            self.stepsize = ephem.stepsize
+
+        # If request validates, do a get
+        if self.validate_get():
+            self.get()
 
     def get(self) -> bool:
-        """Calculate list of SAA entries for a given date range.
+        """
+        Calculate list of SAA entries for a given date range.
 
         Returns
         -------
-        bool
             Did the query succeed?
         """
-        # Validate Query
-        if not self.validate_get():
-            return False
-
         # Calculate SAA windows
         self.entries = self.make_windows(
             [not s for s in self.insaacons], wintype=SAAEntry
@@ -98,28 +129,26 @@ class SAABase(ACROSSAPIBase, MakeWindowBase):
 
         return True
 
-    def insaawindow(self, dttime):
+    def insaawindow(self, t):
         """
         Check if the given Time falls within any of the SAA windows in list.
 
         Arguments
         ---------
-        dttime : Time
+        t
             The Time to check.
 
         Returns
         -------
-        bool
             True if the Time falls within any SAA window, False otherwise.
         """
-        return True in [
-            True for win in self.entries if dttime >= win.begin and dttime <= win.end
-        ]
+        return True in [True for win in self.entries if t >= win.begin and t <= win.end]
 
     @cached_property
     def insaacons(self) -> list:
         """
-        Calculate SAA constraint using SAA Polygon
+        Calculate SAA constraint for each point in the ephemeris using SAA
+        Polygon.
 
         Returns
         -------
@@ -131,3 +160,21 @@ class SAABase(ACROSSAPIBase, MakeWindowBase):
             self.saa.insaa(self.ephem.longitude[i].deg, self.ephem.latitude[i].deg)
             for i in range(len(self.ephem))
         ]
+
+    @classmethod
+    def insaa(cls, t: Time) -> bool:
+        """
+        For a given time, are we in the SAA?
+
+        Parameters
+        ----------
+        dttime
+            Time at which to calculate if we're in SAA
+
+        Returns
+        -------
+            True if we're in the SAA, False otherwise
+        """
+        # Calculate an ephemeris for the exact time requested
+        ephem = cls.ephemclass(begin=t, end=t, stepsize=1e-6 * u.s)  # type: ignore
+        return cls.saa.insaa(ephem.longitude[0].deg, ephem.latitude[0].deg)
