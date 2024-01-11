@@ -85,7 +85,8 @@ async def burstcube_fov_check(
     earth_occult: EarthOccultDep = True,
 ) -> BurstCubeFOVCheckSchema:
     """
-    This endpoint checks if a given point in the sky is within the field of view of the BurstCube telescope, for a given time.
+    This endpoint checks if a given point in the sky is within the field of
+    view of the BurstCube telescope, for a given time.
     """
     fov = BurstCubeFOVCheck(
         ra=ra_dec["ra"],
