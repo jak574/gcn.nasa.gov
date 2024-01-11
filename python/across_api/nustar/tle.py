@@ -13,6 +13,3 @@ from .config import NUSTAR
 @set_observatory(NUSTAR)
 class NuSTARTLE(TLEBase):
     ...
-
-
-TLE = NuSTARTLE

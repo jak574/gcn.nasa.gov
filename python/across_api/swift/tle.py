@@ -13,6 +13,3 @@ from .config import SWIFT
 @set_observatory(SWIFT)
 class SwiftTLE(TLEBase):
     ...
-
-
-TLE = SwiftTLE

@@ -13,6 +13,3 @@ from ..burstcube.config import BURSTCUBE
 @set_observatory(BURSTCUBE)
 class BurstCubeTLE(TLEBase):
     ...
-
-
-TLE = BurstCubeTLE
