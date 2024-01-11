@@ -24,6 +24,3 @@ class NuSTAREphem(EphemBase, ACROSSAPIBase):
     def __init__(self, begin: Time, end: Time, stepsize: u.Quantity = 60 * u.s):
         self.tle = NuSTARTLE(begin).tle
         super().__init__(begin=begin, end=end, stepsize=stepsize)
-
-
-Ephem = NuSTAREphem
