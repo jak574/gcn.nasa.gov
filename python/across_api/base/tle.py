@@ -19,59 +19,44 @@ from .schema import TLEEntry, TLEGetSchema, TLESchema
 
 class TLEBase(ACROSSAPIBase):
     """
-        Class for retrieving and updating spacecraft TLEs in the TLE database. If
-        the TLEs are not found in the database, they are retrieved from
-        space-track.org based on the name of the spacecraft given by `tle_name`.
-        Other backup methods for fetching the TLE include using either the supplied
-        `tle_url`, or from the URL specified in the `tle_concat` attribute (in the
-        concatenated TLE format). TLEs fetched are then written to the database for
-        future use.
+    Class for retrieving and updating spacecraft TLEs in the TLE database. If
+    the TLEs are not found in the database, they are retrieved from
+    space-track.org based on the name of the spacecraft given by `tle_name`.
+    Other backup methods for fetching the TLE include using either the supplied
+    `tle_url`, or from the URL specified in the `tle_concat` attribute (in the
+    concatenated TLE format). TLEs fetched are then written to the database for
+    future use.
 
-        Parameters
-        ----------
-        epoch
-            Epoch of TLE to retrieve
+    Parameters
+    ----------
+    epoch
+        Epoch of TLE to retrieve
 
-        Attributes
-        ----------
-        tles
-            List of TLEs currently loaded
-        tle
-            TLE entry for given epoch
-        offset
-            Offset between TLE epoch and requested epoch in days
-    <<<<<<< HEAD
-    =======
-        tle_name
-            Name of the spacecraft as it appears in the Spacecraft Catalog.
-        tle_url
-            URL to retrieve the TLE from.
-        tle_concat
-            URL to retrieve the TLE from in concatenated format.
-        tle_bad
-            If the TLE is this many days old, it is considered outdated, and a new
-            TLE will be retrieved.
-        tle_min_epoch
-            Minimum epoch for which TLEs are available, typically this will
-            correspond to a date after the launch of the spacecraft.
-    >>>>>>> across-api-add-ephem
+    Attributes
+    ----------
+    tles
+        List of TLEs currently loaded
+    tle
+        TLE entry for given epoch
+    offset
+        Offset between TLE epoch and requested epoch in days
 
-        Methods
-        -------
-        get
-            Get TLEs for given epoch
-        tle_out_of_date
-            Check if the given TLE is out of date
-        read_tle_web
-            Read TLE from dedicated weblink
-        read_tle_concat
-            Read TLEs in the concatenated format
-        read_tle_db
-            Read the best TLE for a given epoch from the local database of TLEs
-        write_db
-            Write a TLE to the database
-        write_db_all_tles
-            Write all loaded TLEs to database
+    Methods
+    -------
+    get
+        Get TLEs for given epoch
+    tle_out_of_date
+        Check if the given TLE is out of date
+    read_tle_web
+        Read TLE from dedicated weblink
+    read_tle_concat
+        Read TLEs in the concatenated format
+    read_tle_db
+        Read the best TLE for a given epoch from the local database of TLEs
+    write_db
+        Write a TLE to the database
+    write_db_all_tles
+        Write all loaded TLEs to database
     """
 
     _schema = TLESchema
