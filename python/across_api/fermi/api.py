@@ -1,13 +1,25 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from typing import Annotated, Literal
 
 from fastapi import Query
 
-from ..base.api import DateRangeDep, EarthOccultDep, RaDecDep, StepSizeDep, app
-from ..base.schema import EphemSchema, SAASchema, VisibilitySchema
+from ..base.api import (
+    DateRangeDep,
+    EarthOccultDep,
+    EpochDep,
+    RaDecDep,
+    StepSizeDep,
+    app,
+)
+from ..base.schema import EphemSchema, SAASchema, TLESchema, VisibilitySchema
 from .ephem import FermiEphem
 from .fov import FermiFOVCheck
 from .saa import FermiSAA
 from .schema import FermiFOVCheckSchema
+from .tle import FermiTLE
 from .visibility import FermiVisibility
 
 
@@ -64,6 +76,16 @@ async def fermi_saa(
     return FermiSAA(
         begin=daterange["begin"], end=daterange["end"], stepsize=stepsize
     ).schema
+
+
+@app.get("/fermi/tle")
+async def fermi_tle(
+    epoch: EpochDep,
+) -> TLESchema:
+    """
+    Returns the best TLE for Fermi for a given epoch.
+    """
+    return FermiTLE(epoch=epoch).schema
 
 
 @app.get("/fermi/visibility")

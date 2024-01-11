@@ -1,6 +1,13 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from typing import List, Literal, Optional
 
+import astropy.units as u  # type: ignore
+
 from ..base.schema import (
+    AstropySeconds,
     BaseSchema,
     DateRangeSchema,
     OptionalCoordSchema,
@@ -25,7 +32,7 @@ class FermiPointingGetSchema(PointingGetSchemaBase):
 class FermiFOVCheckGetSchema(OptionalCoordSchema, DateRangeSchema):
     healpix_loc: Optional[list] = None
     healpix_order: str = "nested"
-    stepsize: int = 60
+    stepsize: AstropySeconds = 60 * u.s
     earthoccult: bool = True
     instrument: Literal["LAT", "GBM"] = "GBM"
 

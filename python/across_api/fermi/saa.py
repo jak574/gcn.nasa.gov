@@ -1,12 +1,17 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from datetime import datetime
 from typing import Optional
 
+import astropy.units as u  # type: ignore
 from shapely.geometry import Polygon  # type: ignore
 
 from ..base.config import set_observatory
 from ..base.saa import SAABase, SAAGetSchema, SAAPolygonBase, SAASchema
 from .config import FERMI
-from .ephem import Ephem
+from .ephem import FermiEphem
 
 
 class FermiSAAPolygon(SAAPolygonBase):
@@ -68,17 +73,17 @@ class FermiSAA(SAABase):
 
     # Internal things
     saa = FermiSAAPolygon()
-    ephem: Ephem
+    ephem: FermiEphem
     begin: datetime
     end: datetime
-    stepsize: int
+    stepsize: u.Quantity
 
     def __init__(
         self,
         begin: datetime,
         end: datetime,
-        ephem: Optional[Ephem] = None,
-        stepsize: int = 60,
+        ephem: Optional[FermiEphem] = None,
+        stepsize: u.Quantity = 60 * u.s,
     ):
         # Attributes
 
@@ -89,7 +94,7 @@ class FermiSAA(SAABase):
         self.begin = begin
         self.end = end
         if ephem is None:
-            self.ephem = Ephem(begin=begin, end=end, stepsize=stepsize)
+            self.ephem = FermiEphem(begin=begin, end=end, stepsize=stepsize)
             self.stepsize = stepsize
         else:
             self.ephem = ephem
@@ -116,8 +121,8 @@ class FermiSAA(SAABase):
             True if we're in the SAA, False otherwise
         """
         # Calculate an ephemeris for the exact time requested
-        ephem = Ephem(begin=dttime, end=dttime)  # type: ignore
-        return cls.saa.insaa(ephem.longitude[0], ephem.latitude[0])
+        ephem = FermiEphem(begin=dttime, end=dttime)  # type: ignore
+        return cls.saa.insaa(ephem.longitude[0].deg, ephem.latitude[0].deg)
 
 
 # Class alias
