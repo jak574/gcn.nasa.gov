@@ -1,3 +1,7 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from ..base.api import DateRangeDep, RaDecDep, StepSizeDep, app, EpochDep
 from ..base.schema import EphemSchema, SAASchema, VisibilitySchema, TLESchema
 from .ephem import NuSTAREphem
