@@ -10,12 +10,16 @@ import astropy.units as u  # type: ignore
 from arc import tables  # type: ignore
 from astropy.constants import c, h  # type: ignore
 from astropy.time import Time  # type: ignore
+from astropy.coordinates import Latitude, Longitude, SkyCoord, CartesianRepresentation  # type: ignore
 from pydantic import (
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
     PlainSerializer,
+    WithJsonSchema,
     computed_field,
+    conlist,
     model_validator,
     AnyUrl,
 )
@@ -27,6 +31,107 @@ AstropyTime = Annotated[
     PlainSerializer(
         lambda x: x.utc.datetime,
         return_type=datetime,
+    ),
+    WithJsonSchema({"type": "string", "format": "date-time"}, mode="serialization"),
+    WithJsonSchema({"type": "string", "format": "date-time"}, mode="validation"),
+]
+# Define a Pydantic type for list-type astropy Time objects, which will be
+# serialized as a list of naive UTC datetime objects, or a list of strings in
+# ISO format for JSON.
+AstropyTimeList = Annotated[
+    Time,
+    BeforeValidator(lambda x: Time(x)),
+    PlainSerializer(
+        lambda x: x.utc.datetime.tolist(),
+        return_type=List[datetime],
+    ),
+    WithJsonSchema(
+        {"type": "array", "items": {"type": "string", "format": "date-time"}},
+        mode="serialization",
+    ),
+    WithJsonSchema(
+        {"type": "array", "items": {"type": "string", "format": "date-time"}},
+        mode="validation",
+    ),
+]
+
+# Define a Pydantic type for astropy Latitude, Longitude and u.Quantity list-type
+# objects, which will be serialized as a list of float in units of degrees.
+AstropyDegrees = Annotated[
+    Union[Latitude, Longitude, u.Quantity],
+    PlainSerializer(
+        lambda x: x.deg.tolist()
+        if type(x) is not u.Quantity
+        else x.to(u.deg).value.tolist(),
+        return_type=List[float],
+    ),
+]
+
+AstropyAngle = Annotated[
+    u.Quantity,
+    PlainSerializer(
+        lambda x: x.deg,
+        return_type=float,
+    ),
+]
+
+# Pydantic type to serialize astropy SkyCoord or CartesianRepresentation objects as a list
+# of vectors in units of km
+AstropyPositionVector = Annotated[
+    Union[CartesianRepresentation, SkyCoord],
+    PlainSerializer(
+        lambda x: x.xyz.to(u.km).value.T.tolist()
+        if type(x) is CartesianRepresentation
+        else x.cartesian.xyz.to(u.km).value.T.tolist(),
+        return_type=List[conlist(float, min_length=3, max_length=3)],  # type: ignore
+    ),
+]
+
+# Pydantic type to serialize astropy CartesianRepresentation velocity objects as a list
+# of vectors in units of km/s
+AstropyVelocityVector = Annotated[
+    CartesianRepresentation,
+    PlainSerializer(
+        lambda x: x.xyz.to(u.km / u.s).value.T.tolist(),
+        return_type=List[conlist(float, min_length=3, max_length=3)],  # type: ignore
+    ),
+]
+
+# Pydantic type to serialize astropy SkyCoord objects as a list
+# of vectors with no units
+AstropyUnitVector = Annotated[
+    SkyCoord,
+    PlainSerializer(
+        lambda x: x.cartesian.xyz.value.T.tolist(),
+        return_type=List[conlist(float, min_length=3, max_length=3)],  # type: ignore
+    ),
+]
+
+
+# Pydantic type for a Astropy Time  in days
+AstropyDays = Annotated[
+    u.Quantity,
+    PlainSerializer(
+        lambda x: x.to(u.day).value,
+        return_type=float,
+    ),
+]
+
+# Pydantic type for a Astropy Time  in seconds
+AstropySeconds = Annotated[
+    u.Quantity,
+    BeforeValidator(lambda x: x * u.s if type(x) is not u.Quantity else x.to(u.s)),
+    PlainSerializer(
+        lambda x: x.to(u.s).value,
+        return_type=float,
+    ),
+    WithJsonSchema(
+        {"type": "number"},
+        mode="serialization",
+    ),
+    WithJsonSchema(
+        {"type": "number"},
+        mode="validation",
     ),
 ]
 
