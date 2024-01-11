@@ -11,6 +11,8 @@ from astropy.coordinates import SkyCoord  # type: ignore
 from boto3.dynamodb.conditions import Key  # type: ignore
 from fastapi import HTTPException
 
+from python.across_api.base.schema import PointSchema
+
 from ..across.user import check_api_key
 from arc import tables  # type: ignore
 from ..base.common import ACROSSAPIBase
@@ -21,7 +23,6 @@ from .config import BURSTCUBE
 from .models import BurstCubeTOOModel
 from .saa import BurstCubeSAA
 from .schema import (
-    BurstCubePoint,
     BurstCubeTOODelSchema,
     BurstCubeTOOGetSchema,
     BurstCubeTOOModelSchema,
@@ -317,7 +318,7 @@ class BurstCubeTOO(ACROSSAPIBase):
                     return False
                 # If a BurstCubePoint is returned by infov, check if IFOV coverage is None or < 1%, report occulted
                 # FIXME: Rather than hardcoding, this should be a parameter in config.py
-                elif type(infov) is BurstCubePoint and (
+                elif type(infov) is PointSchema and (
                     infov.infov is None or infov.infov < self.healpix_minprob
                 ):
                     self.warnings.append("Trigger was occulted at T0.")

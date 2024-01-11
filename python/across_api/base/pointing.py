@@ -31,10 +31,10 @@ class PointingBase(ACROSSAPIBase):
         List of spacecraft pointings
     """
 
-    _schema = PointingSchemaBase
-    _get_schema = PointingGetSchemaBase
+    _schema = PointingSchema
+    _get_schema = PointingGetSchema
 
-    entries: List[PointBase]
+    entries: List[PointSchema]
     stepsize: u.Quantity = 60 * u.s
     begin: Time
     end: Time

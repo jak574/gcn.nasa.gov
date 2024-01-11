@@ -11,9 +11,6 @@ from ..base.schema import (
     PlanEntryBase,
     PlanGetSchemaBase,
     PlanSchemaBase,
-    PointBase,
-    PointingGetSchemaBase,
-    PointingSchemaBase,
     UserSchema,
 )
 
@@ -43,19 +40,6 @@ class SwiftPlanEntriesSchema(BaseSchema):
 
 class SwiftPlanSchema(PlanSchemaBase):
     entries: List[SwiftPlanEntry]  # type: ignore
-
-
-class SwiftPoint(PointBase):
-    roll: Optional[float]
-    pass
-
-
-class SwiftPointingSchema(PointingSchemaBase):
-    pass
-
-
-class SwiftPointingGetSchema(PointingGetSchemaBase):
-    pass
 
 
 class SwiftObsEntry(PlanEntryBase):

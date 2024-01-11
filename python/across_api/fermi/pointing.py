@@ -12,10 +12,11 @@ from astropy.io import fits  # type: ignore
 from astropy.time import Time  # type: ignore
 from fastapi import HTTPException
 
+from python.across_api.base.schema import PointSchema
+
 from ..base.config import set_observatory
 from ..base.pointing import PointingBase
 from .config import FERMI
-from .schema import FermiPoint, FermiPointingGetSchema, FermiPointingSchema
 
 
 def time_from_year_and_day(year: int, day_of_year: int) -> Time:
@@ -66,9 +67,6 @@ def latestfermi(starttime: Time) -> Union[str, bool]:
 
 @set_observatory(FERMI)
 class FermiPointing(PointingBase):
-    _schema = FermiPointingSchema
-    _get_schema = FermiPointingGetSchema
-
     def __init__(self, begin: Time, end: Time, stepsize: u.Quantity = 60 * u.s):
         self.begin = begin
         self.end = end
@@ -111,7 +109,9 @@ class FermiPointing(PointingBase):
             self.times.append(t)
             ra = self.hdu[1].data["RA_SCZ"][i]
             dec = self.hdu[1].data["DEC_SCZ"][i]
-            self.entries.append(FermiPoint(timestamp=t, ra=ra, dec=dec, observing=True))
+            self.entries.append(
+                PointSchema(timestamp=t, ra=ra, dec=dec, observing=True)
+            )
 
         # Set the stepsize, should be 60s for Fermi FT2 files
         self.stepsize = self.entries[1].timestamp - self.entries[0].timestamp

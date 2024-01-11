@@ -315,7 +315,7 @@ class SAAGetSchema(DateRangeSchema):
 
 
 # Pointing Schemas
-class PointBase(OptionalCoordSchema):
+class PointSchema(OptionalCoordSchema):
     """
     Schema defining a spacecraft pointing
 
@@ -343,12 +343,12 @@ class PointBase(OptionalCoordSchema):
     infov: Union[bool, float, None] = None
 
 
-class PointingSchemaBase(BaseSchema):
-    entries: List[PointBase]
+class PointingSchema(BaseSchema):
+    entries: List[PointSchema]
 
 
-class PointingGetSchemaBase(DateRangeSchema):
-    stepsize: int = 60
+class PointingGetSchema(DateRangeSchema):
+    stepsize: AstropySeconds
 
 
 # Plan Schema
