@@ -19,7 +19,7 @@ astropy==6.0.0
     #   astropy-healpix
 astropy-healpix==1.0.2
     # via -r requirements.in
-astropy-iers-data==0.2024.1.8.0.30.55
+astropy-iers-data
     # via astropy
 attrs==23.2.0
     # via rush
