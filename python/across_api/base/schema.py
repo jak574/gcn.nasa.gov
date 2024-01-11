@@ -15,7 +15,6 @@ from astropy.coordinates import (  # type: ignore
     SkyCoord,
 )
 from astropy.time import Time  # type: ignore
-from astropy.units.quantity import Quantity  # type: ignore
 from pydantic import (
     BaseModel,
     BeforeValidator,
@@ -61,20 +60,20 @@ AstropyTimeList = Annotated[
     ),
 ]
 
-# Define a Pydantic type for astropy Latitude, Longitude and Quantity list-type
+# Define a Pydantic type for astropy Latitude, Longitude and u.Quantity list-type
 # objects, which will be serialized as a list of float in units of degrees.
 AstropyDegrees = Annotated[
-    Union[Latitude, Longitude, Quantity],
+    Union[Latitude, Longitude, u.Quantity],
     PlainSerializer(
         lambda x: x.deg.tolist()
-        if type(x) is not Quantity
+        if type(x) is not u.Quantity
         else x.to(u.deg).value.tolist(),
         return_type=List[float],
     ),
 ]
 
 AstropyAngle = Annotated[
-    Quantity,
+    u.Quantity,
     PlainSerializer(
         lambda x: x.deg,
         return_type=float,
@@ -116,7 +115,7 @@ AstropyUnitVector = Annotated[
 
 # Pydantic type for a Astropy Time  in days
 AstropyDays = Annotated[
-    Quantity,
+    u.Quantity,
     PlainSerializer(
         lambda x: x.to(u.day).value,
         return_type=float,
@@ -125,8 +124,8 @@ AstropyDays = Annotated[
 
 # Pydantic type for a Astropy Time  in seconds
 AstropySeconds = Annotated[
-    Quantity,
-    BeforeValidator(lambda x: x * u.s if type(x) is not Quantity else x.to(u.s)),
+    u.Quantity,
+    BeforeValidator(lambda x: x * u.s if type(x) is not u.Quantity else x.to(u.s)),
     PlainSerializer(
         lambda x: x.to(u.s).value,
         return_type=float,
