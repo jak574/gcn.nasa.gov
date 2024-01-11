@@ -1,4 +1,5 @@
-from datetime import datetime
+import astropy.units as u  # type: ignore
+from astropy.time import Time  # type: ignore
 
 from .ephem import EphemBase
 from .schema import VisWindow
@@ -6,8 +7,8 @@ from .schema import VisWindow
 
 class MakeWindowBase:
     ephem: EphemBase
-    begin: datetime
-    end: datetime
+    begin: Time
+    end: Time
 
     def constraint(self, index):
         """
@@ -59,6 +60,6 @@ class MakeWindowBase:
 
         if not inocc:
             win = wintype(begin=self.ephem.timestamp[inindex], end=self.ephem.timestamp[i], initial=self.constraint(inindex - 1), final=self.constraint(i))  # type: ignore
-            if (win.end - win.begin).total_seconds() > 0:
+            if (win.end - win.begin).to(u.s) > 0:
                 windows.append(win)
         return windows
