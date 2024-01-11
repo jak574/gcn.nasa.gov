@@ -2,14 +2,12 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from typing import Optional
 
 import astropy.units as u  # type: ignore
-from astropy.time import Time  # type: ignore
 from shapely.geometry import Polygon  # type: ignore
 
 from ..base.config import set_observatory
-from ..base.saa import SAABase, SAAGetSchema, SAAPolygonBase, SAASchema
+from ..base.saa import SAABase, SAAPolygonBase
 from .config import NICER
 from .ephem import NICEREphem
 
@@ -47,83 +45,18 @@ class NICERSAAPolygon(SAAPolygonBase):
 
 @set_observatory(NICER)
 class NICERSAA(SAABase):
-    """Class to calculate NICER SAA entries.
-
-    Parameters
-    ----------
-    begin : datetime
-        Start time of SAA search
-    end : datetime
-        End time of SAA search
-    ephem : Optional[NICEREphem]
-        NICEREphem object to use for SAA calculations
-    stepsize : int
-        Step size in seconds for SAA calculations
-
-    Attributes
-    ----------
-    entries : list
-        List of SAA entries
-    status : JobInfo
-        Status of SAA query
+    """
+    Class to calculate NICER SAA passages.
     """
 
-    _schema = SAASchema
-    _get_schema = SAAGetSchema
-
-    # Internal things
     saa = NICERSAAPolygon()
-    ephem: NICEREphem
-    begin: Time
-    end: Time
-    stepsize: int
+    ephemclass = NICEREphem
 
-    def __init__(
-        self,
-        begin: Time,
-        end: Time,
-        ephem: Optional[NICEREphem] = None,
-        stepsize: u.Quantity = 60 * u.s,
-    ):
-        # Attributes
-
-        self._insaacons: Optional[list] = None
-        self.entries = None
-
-        # Parameters
-        self.begin = begin
-        self.end = end
+    def __init__(self, begin, end, ephem=None, stepsize=60 * u.s):
+        """
+        Initialize the SAA class. Set up the Ephemeris if it's not given.
+        """
+        # Need to instantiate the ephem class here or else th
         if ephem is None:
-            self.ephem = NICEREphem(begin=begin, end=end, stepsize=stepsize)
-            self.stepsize = stepsize
-        else:
-            self.ephem = ephem
-            # Make sure stepsize matches supplied ephemeris
-            self.stepsize = ephem.stepsize
-
-        # If request validates, query
-        if self.validate_get():
-            self.get()
-
-    @classmethod
-    def insaa(cls, dttime: Time) -> bool:
-        """
-        For a given datetime, are we in the SAA?
-
-        Parameters
-        ----------
-        dttime : datetime
-            Time at which to calculate if we're in SAA
-
-        Returns
-        -------
-        bool
-            True if we're in the SAA, False otherwise
-        """
-        # Calculate an ephemeris for the exact time requested
-        ephem = NICEREphem(begin=dttime, end=dttime)  # type: ignore
-        return cls.saa.insaa(ephem.longitude[0].deg, ephem.latitude[0].deg)
-
-
-# Class alias
-SAA = NICERSAA
+            ephem = NICEREphem(begin, end, stepsize)
+        super().__init__(begin, end, ephem, stepsize)
