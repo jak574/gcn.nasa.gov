@@ -1,3 +1,7 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 import astropy.units as u  # type: ignore
 import numpy as np
 from astropy.time import Time  # type: ignore
