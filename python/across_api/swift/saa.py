@@ -281,7 +281,7 @@ class SwiftSAAPolygon(SAAPolygonBase):
 
 
 @set_observatory(SWIFT)
-class SWIFTSAA(SAABase):
+class SwiftSAA(SAABase):
     """
     Class to calculate SWIFT SAA passages.
     """
