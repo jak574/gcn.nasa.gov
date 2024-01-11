@@ -10,11 +10,10 @@ from fastapi import HTTPException
 from ..across.user import check_api_key
 from ..base.common import ACROSSAPIBase, round_time
 from ..base.config import set_observatory
-from ..base.schema import AstropySeconds
 from ..burstcube.fov import BurstCubeFOVCheck
 from .config import BURSTCUBE
 from .models import BurstCubeTOOModel
-from .saa import SAA
+from .saa import BurstCubeSAA
 from .schema import (
     BurstCubePoint,
     BurstCubeTOODelSchema,
@@ -63,7 +62,7 @@ class BurstCubeTOO(ACROSSAPIBase):
     justification: Optional[str]
     begin: Optional[Time]
     end: Optional[Time]
-    exposure: AstropySeconds
+    exposure: u.Quantity
     offset: float
     reason: TOOReason
     healpix_loc: Optional[np.ndarray]
@@ -277,7 +276,9 @@ class BurstCubeTOO(ACROSSAPIBase):
             return False
 
         # Check if the trigger time is in the SAA
-        saa = SAA(begin=self.trigger_time, end=self.trigger_time, stepsize=1 * u.s)
+        saa = BurstCubeSAA(
+            begin=self.trigger_time, end=self.trigger_time, stepsize=1 * u.s
+        )
         if saa.insaa(self.trigger_time):
             self.warnings.append("Trigger time inside SAA.")
             self.reason = TOOReason.saa
