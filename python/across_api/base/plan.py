@@ -65,8 +65,8 @@ class PlanBase(ACROSSAPIBase):
         # Remove existing entries for this date range and replace them with new ones
         with Session(engine) as sess:
             sess.query(self._entry_model).filter(
-                self._entry_model.begin >= begin
-            ).filter(self._entry_model.end <= end).delete()
+                self._entry_model.begin >= begin.utc.datetime
+            ).filter(self._entry_model.end <= end.utc.datetime).delete()
             sess.add_all([self._entry_model(**e.model_dump()) for e in self.entries])
             sess.commit()
 
@@ -166,6 +166,6 @@ class PlanBase(ACROSSAPIBase):
         # Fetch from database
         with Session(engine) as sess:
             result = sess.execute(command)
-            values = result.all()
+            values = result.fetchall()
             self.entries = [self._entry_schema.model_validate(val[0]) for val in values]
         return True
