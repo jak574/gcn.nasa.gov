@@ -30,7 +30,7 @@ async def epoch(
             description="Epoch in UTC or ISO format.",
         ),
     ],
-) -> Optional[Time]:
+) -> Optional[datetime]:
     return Time(epoch)
 
 
@@ -76,6 +76,8 @@ async def optional_daterange(
     """
     Helper function to convert begin and end to datetime objects.
     """
+    if begin is None or end is None:
+        return {"begin": None, "end": None}
     return {"begin": Time(begin), "end": Time(end)}
 
 
