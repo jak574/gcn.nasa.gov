@@ -1,11 +1,6 @@
-# Copyright © 2023 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
-# All Rights Reserved.
-
-from datetime import datetime
-
 import astropy.units as u  # type: ignore
 import numpy as np
+from astropy.time import Time  # type: ignore
 
 from ..base.config import ConfigSchema
 
@@ -42,8 +37,8 @@ BURSTCUBE = {
         "parallax": False,  # Calculate parallax for Moon/Sun
         "apparent": True,  # Use apparent positions
         "velocity": False,  # Calculate Velocity of spacecraft (slower)
-        "stepsize": 60,  # Stepsize
-        "earth_radius": 70,  # Fix 70 degree Earth radius
+        "stepsize": 60 * u.s,  # Stepsize
+        "earth_radius": 70 * u.deg,  # Fix 70 degree Earth radius
     },
     # Visibility constraint calculation defaults. i.e. what constraints should be considered
     "visibility": {
@@ -55,20 +50,23 @@ BURSTCUBE = {
         "pole_cons": False,  # Calcualte Orbit Pole Constraint
         "saa_cons": True,  # Calculate time in SAA as a constraint
         # Constraint avoidance values
-        "earthoccult": 0,  # How many degrees from Earth Limb can you look?
-        "moonoccult": 0,  # degrees from center of Moon
-        "sunoccult": 0,  # degrees from center of Sun
-        "sunextra": 0,  # degrees buffer used for planning purpose
-        "earthextra": 0,  # degrees buffer used for planning purpose
-        "moonextra": 0,  # degrees buffer used for planning purpose
+        "earthoccult": 0 * u.deg,  # How many degrees from Earth Limb can you look?
+        "moonoccult": 0 * u.deg,  # degrees from center of Moon
+        "sunoccult": 0 * u.deg,  # degrees from center of Sun
+        "sunextra": 0 * u.deg,  # degrees buffer used for planning purpose
+        "earthextra": 0 * u.deg,  # degrees buffer used for planning purpose
+        "moonextra": 0 * u.deg,  # degrees buffer used for planning purpose
+        "ramsize": 0 * u.deg,  # degrees buffer used for planning purpose
+        "ramextra": 0 * u.deg,  # degrees buffer used for planning purpose
     },
     # Information on where to obtain a TLE for this Observatory
     "tle": {
-        "tle_bad": 40,  # days
+        "tle_bad": 40 * u.day,  # days
         "tle_name": "ISS (ZARYA)",
+        "tle_norad_id": 25544,
         "tle_concat": None,
         "tle_url": "https://celestrak.org/NORAD/elements/gp.php?INTDES=1998-067",
-        "tle_min_epoch": datetime(2023, 12, 22),
+        "tle_min_epoch": Time("2023-12-22", format="isot", scale="utc"),
     },
 }
 

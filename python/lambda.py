@@ -13,7 +13,7 @@ import across_api.nustar.api  # type: ignore # noqa F401
 import across_api.swift.api  # type: ignore # noqa F401
 
 
-from .env import feature
+from env import feature  # type: ignore
 
 if feature("LABS"):
     handler = Mangum(app, api_gateway_base_path="/labs/api/v1", lifespan="off")
