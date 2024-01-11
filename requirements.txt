@@ -1,6 +1,7 @@
 black
-boto3
+boto3==1.34.11
 mypy
+pytest
 pip-tools
 types-requests
 types-cachetools
