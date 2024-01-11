@@ -31,7 +31,6 @@ class BurstCubeVisibility(VisibilityBase, ACROSSAPIBase):
         # Parameters
         self.ra = ra
         self.dec = dec
-        self.username = "anonymous"
         self.begin = begin
         self.stepsize = stepsize
         self.end = end
