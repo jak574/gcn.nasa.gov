@@ -10,7 +10,6 @@ from arc import tables  # type: ignore
 from astropy.time import Time  # type: ignore
 from boto3.dynamodb.conditions import Key  # type: ignore
 from fastapi import HTTPException
-
 from python.across_api.base.schema import PointSchema
 
 from ..across.user import check_api_key

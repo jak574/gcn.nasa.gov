@@ -3,10 +3,10 @@
 # All Rights Reserved.
 
 import numpy as np
-from sqlalchemy.sql.functions import Function, func
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase  # type: ignore
 from sqlalchemy.orm.attributes import InstrumentedAttribute
+from sqlalchemy.sql.functions import Function, func
 
 from .api_secrets import (
     ACROSS_DB_HOST,

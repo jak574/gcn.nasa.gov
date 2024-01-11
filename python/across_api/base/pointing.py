@@ -9,7 +9,7 @@ import numpy as np
 from astropy.time import Time  # type: ignore
 
 from .common import ACROSSAPIBase, round_time
-from .schema import PointSchema, PointingGetSchema, PointingSchema
+from .schema import PointingGetSchema, PointingSchema, PointSchema
 
 
 class PointingBase(ACROSSAPIBase):
