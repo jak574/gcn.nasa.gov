@@ -18,7 +18,7 @@ from fastapi import HTTPException
 from .common import ACROSSAPIBase, round_time
 from .ephem import EphemBase
 from .pointing import PointingBase
-from .schema import ConfigSchema, FOVOffsetSchema, PointBase
+from .schema import ConfigSchema, FOVOffsetSchema, PointSchema
 
 
 class FOVBase(ACROSSAPIBase):
@@ -768,7 +768,7 @@ class FOVCheckBase(ACROSSAPIBase):
                     ra=self.ra, dec=self.dec, earth=earth, earth_size=earth_size
                 )
 
-    def infov(self, trigger_time: Time) -> Union[bool, PointBase]:
+    def infov(self, trigger_time: Time) -> Union[bool, PointSchema]:
         """
         Is given the current spacecraft pointing, is the target at the
         given coordinates inside the FOV.

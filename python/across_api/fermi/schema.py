@@ -11,22 +11,8 @@ from ..base.schema import (
     BaseSchema,
     DateRangeSchema,
     OptionalCoordSchema,
-    PointBase,
-    PointingGetSchemaBase,
-    PointingSchemaBase,
+    PointSchema,
 )
-
-
-class FermiPoint(PointBase):
-    pass
-
-
-class FermiPointingSchema(PointingSchemaBase):
-    pass
-
-
-class FermiPointingGetSchema(PointingGetSchemaBase):
-    pass
 
 
 class FermiFOVCheckGetSchema(OptionalCoordSchema, DateRangeSchema):
@@ -38,4 +24,4 @@ class FermiFOVCheckGetSchema(OptionalCoordSchema, DateRangeSchema):
 
 
 class FermiFOVCheckSchema(BaseSchema):
-    entries: List[FermiPoint]
+    entries: List[PointSchema]

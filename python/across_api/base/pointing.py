@@ -9,7 +9,7 @@ import numpy as np
 from astropy.time import Time  # type: ignore
 
 from .common import ACROSSAPIBase, round_time
-from .schema import PointBase, PointingGetSchemaBase, PointingSchemaBase
+from .schema import PointSchema, PointingGetSchema, PointingSchema
 
 
 class PointingBase(ACROSSAPIBase):
@@ -30,10 +30,10 @@ class PointingBase(ACROSSAPIBase):
         List of spacecraft pointings
     """
 
-    _schema = PointingSchemaBase
-    _get_schema = PointingGetSchemaBase
+    _schema = PointingSchema
+    _get_schema = PointingGetSchema
 
-    entries: List[PointBase]
+    entries: List[PointSchema]
     stepsize: u.Quantity = 60 * u.s
     begin: Time
     end: Time

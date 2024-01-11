@@ -7,12 +7,13 @@ import astropy.units as u  # type: ignore
 from astropy.time import Time  # type: ignore
 from fastapi import HTTPException
 
+from python.across_api.base.schema import PointSchema
+
 from ..base.config import set_observatory
 from ..base.pointing import PointingBase
 from ..swift.observations import SwiftObservations
 from ..swift.plan import SwiftPlan
 from .config import SWIFT
-from .schema import SwiftPoint, SwiftPointingGetSchema, SwiftPointingSchema
 
 
 @set_observatory(SWIFT)
@@ -36,9 +37,6 @@ class SwiftPointing(PointingBase):
     status : JobInfo
         Info about pointing query
     """
-
-    _schema = SwiftPointingSchema
-    _get_schema = SwiftPointingGetSchema
 
     def __init__(self, begin: Time, end: Time, stepsize: u.Quantity = 60 * u.s):
         self.begin = begin
@@ -81,7 +79,7 @@ class SwiftPointing(PointingBase):
             # If no entry, then the spacecraft is not observing
             if ent is None:
                 self.entries.append(
-                    SwiftPoint(
+                    PointSchema(
                         timestamp=t, ra=None, dec=None, roll=None, observing=True
                     )
                 )
@@ -94,7 +92,7 @@ class SwiftPointing(PointingBase):
 
                 # Add the entry to the list
                 self.entries.append(
-                    SwiftPoint(
+                    PointSchema(
                         timestamp=t,
                         ra=ent.ra,
                         dec=ent.dec,

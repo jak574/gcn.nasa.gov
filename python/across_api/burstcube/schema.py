@@ -12,9 +12,7 @@ from ..base.schema import (
     OptionalCoordSchema,
     OptionalDateRangeSchema,
     OptionalPositionSchema,
-    PointBase,
-    PointingGetSchemaBase,
-    PointingSchemaBase,
+    PointSchema,
     UserSchema,
 )
 
@@ -269,18 +267,6 @@ class BurstCubeTOOSchema(BurstCubeTOOModelSchema):
     ...
 
 
-class BurstCubePoint(PointBase):
-    ...
-
-
-class BurstCubePointingSchema(PointingSchemaBase):
-    ...
-
-
-class BurstCubePointingGetSchema(PointingGetSchemaBase):
-    ...
-
-
 class BurstCubeFOVCheckGetSchema(OptionalCoordSchema, DateRangeSchema):
     """
     Schema for BurstCube FOV Check Get request.
@@ -306,11 +292,11 @@ class BurstCubeFOVCheckSchema(BaseSchema):
 
     Attributes
     ----------
-    entries : List[BurstCubePoint]
+    entries
         List of BurstCube points.
     """
 
-    entries: List[BurstCubePoint]
+    entries: List[PointSchema]
 
 
 class BurstCubeTOOGetSchema(UserSchema):
