@@ -1,7 +1,8 @@
-from ..base.api import DateRangeDep, RaDecDep, StepSizeDep, app
-from ..base.schema import EphemSchema, SAASchema, VisibilitySchema
+from ..base.api import DateRangeDep, RaDecDep, StepSizeDep, app, EpochDep
+from ..base.schema import EphemSchema, SAASchema, VisibilitySchema, TLESchema
 from .ephem import NuSTAREphem
 from .saa import NuSTARSAA
+from .tle import NuSTARTLE
 from .visibility import NuSTARVisibility
 
 
@@ -29,6 +30,16 @@ async def nustar_saa(
     return NuSTARSAA(
         begin=daterange["begin"], end=daterange["end"], stepsize=stepsize
     ).schema
+
+
+@app.get("/nustar/tle")
+async def nustar_tle(
+    epoch: EpochDep,
+) -> TLESchema:
+    """
+    Returns the best TLE for NuSTAR for a given epoch.
+    """
+    return NuSTARTLE(epoch=epoch).schema
 
 
 @app.get("/nustar/visibility")
