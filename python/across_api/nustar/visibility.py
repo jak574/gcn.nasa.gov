@@ -1,15 +1,21 @@
-from datetime import datetime, time, timedelta
-from typing import List
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
+import astropy.units as u  # type: ignore
+import numpy as np
+from astropy.time import Time  # type: ignore
+from cachetools import TTLCache, cached
 
 from ..base.common import ACROSSAPIBase
 from ..base.config import set_observatory
-from ..base.schema import VisWindow
-from ..base.visibility import VisibilityBase, VisibilityGetSchema, VisibilitySchema
+from ..base.visibility import VisibilityBase
 from .config import NUSTAR
-from .ephem import Ephem
-from .saa import SAA
+from .ephem import NuSTAREphem
+from .saa import NuSTARSAA
 
 
+@cached(cache=TTLCache(maxsize=128, ttl=86400))
 @set_observatory(NUSTAR)
 class NuSTARVisibility(VisibilityBase, ACROSSAPIBase):
     """Class to calculate NuSTAR visibility.
@@ -48,12 +54,16 @@ class NuSTARVisibility(VisibilityBase, ACROSSAPIBase):
     saa: SAA
 
     def __init__(
-        self, ra: float, dec: float, begin: datetime, end: datetime, stepsize: int = 60
+        self,
+        ra: float,
+        dec: float,
+        begin: Time,
+        end: Time,
+        stepsize: u.Quantity = 60 * u.s,
     ):
         # Parameters
         self.ra = ra
         self.dec = dec
-        self.username = "anonymous"
         self.begin = begin
         self.stepsize = stepsize
         self.end = end
@@ -73,5 +83,3 @@ class NuSTARVisibility(VisibilityBase, ACROSSAPIBase):
 
 # NuSTAR specific aliases for classes
 Visibility = NuSTARVisibility
-NuSTARVisibilityGetSchema = VisibilityGetSchema
-NuSTARVisibilitySchema = VisibilitySchema
