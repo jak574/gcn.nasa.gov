@@ -2,9 +2,10 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from datetime import datetime
 from typing import Optional
 
+import astropy.units as u  # type: ignore
+from astropy.time import Time  # type: ignore
 from shapely.geometry import Polygon  # type: ignore
 
 from ..base.config import set_observatory
@@ -55,7 +56,7 @@ class NICERSAA(SAABase):
     end : datetime
         End time of SAA search
     ephem : Optional[NICEREphem]
-        Ephem object to use for SAA calculations
+        NICEREphem object to use for SAA calculations
     stepsize : int
         Step size in seconds for SAA calculations
 
@@ -73,16 +74,16 @@ class NICERSAA(SAABase):
     # Internal things
     saa = NICERSAAPolygon()
     ephem: NICEREphem
-    begin: datetime
-    end: datetime
+    begin: Time
+    end: Time
     stepsize: int
 
     def __init__(
         self,
-        begin: datetime,
-        end: datetime,
+        begin: Time,
+        end: Time,
         ephem: Optional[NICEREphem] = None,
-        stepsize: int = 60,
+        stepsize: u.Quantity = 60 * u.s,
     ):
         # Attributes
 
@@ -105,7 +106,7 @@ class NICERSAA(SAABase):
             self.get()
 
     @classmethod
-    def insaa(cls, dttime: datetime) -> bool:
+    def insaa(cls, dttime: Time) -> bool:
         """
         For a given datetime, are we in the SAA?
 
@@ -121,7 +122,7 @@ class NICERSAA(SAABase):
         """
         # Calculate an ephemeris for the exact time requested
         ephem = NICEREphem(begin=dttime, end=dttime)  # type: ignore
-        return cls.saa.insaa(ephem.longitude[0], ephem.latitude[0])
+        return cls.saa.insaa(ephem.longitude[0].deg, ephem.latitude[0].deg)
 
 
 # Class alias
