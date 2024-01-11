@@ -1,12 +1,12 @@
 from typing import Optional
 
 import astropy.units as u  # type: ignore
+from arc import tables  # type: ignore
 from astropy.coordinates import SkyCoord  # type: ignore
 from astropy.time import Time  # type: ignore
 from boto3.dynamodb.conditions import Key  # type: ignore
 
 from ..across.user import check_api_key
-from arc import tables  # type: ignore
 from ..base.common import ACROSSAPIBase
 from .schema import (
     BurstCubeTOORequestsGetSchema,

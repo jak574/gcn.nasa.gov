@@ -2,16 +2,15 @@ from typing import Optional
 
 import astropy.units as u  # type: ignore
 import numpy as np  # type: ignore
+from arc import tables  # type: ignore
 from astropy.time import Time  # type: ignore
 from boto3.dynamodb.conditions import Key  # type: ignore
 from fastapi import HTTPException
 
-from ..base.schema import AstropySeconds
-
 from ..across.user import check_api_key
-from arc import tables  # type: ignore
 from ..base.common import ACROSSAPIBase, round_time
 from ..base.config import set_observatory
+from ..base.schema import AstropySeconds
 from ..burstcube.fov import BurstCubeFOVCheck
 from .config import BURSTCUBE
 from .models import BurstCubeTOOModel
