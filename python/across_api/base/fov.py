@@ -1,4 +1,7 @@
-from datetime import datetime
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from typing import Optional, Union
 
 import astropy.units as u  # type: ignore
@@ -7,6 +10,7 @@ import numpy as np
 from astropy.coordinates import CartesianRepresentation  # type: ignore
 from astropy.coordinates import Latitude, Longitude, SkyCoord
 from astropy.coordinates.matrix_utilities import rotation_matrix  # type: ignore
+from astropy.time import Time  # type: ignore
 from astropy.io import fits  # type: ignore
 from erfa import pdp  # type: ignore
 from fastapi import HTTPException
@@ -764,7 +768,7 @@ class FOVCheckBase(ACROSSAPIBase):
                     ra=self.ra, dec=self.dec, earth=earth, earth_size=earth_size
                 )
 
-    def infov(self, trigger_time: datetime) -> Union[bool, PointBase]:
+    def infov(self, trigger_time: Time) -> Union[bool, PointBase]:
         """
         Is given the current spacecraft pointing, is the target at the
         given coordinates inside the FOV.
