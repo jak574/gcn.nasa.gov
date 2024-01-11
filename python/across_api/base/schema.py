@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Annotated, Any, List, Optional, Union
 
 import astropy.units as u  # type: ignore
+from arc import tables  # type: ignore
 from astropy.constants import c, h  # type: ignore
 from astropy.coordinates import (  # type: ignore
     CartesianRepresentation,
@@ -27,8 +28,6 @@ from pydantic import (
     model_validator,
 )
 from pydantic_core import Url
-
-from arc import tables  # type: ignore
 
 # Define a Pydantic type for astropy Time objects, which will be serialized as
 # a naive UTC datetime object, or a string in ISO format for JSON.
