@@ -11,8 +11,8 @@ import requests
 from astropy.io import fits  # type: ignore
 from astropy.time import Time  # type: ignore
 from fastapi import HTTPException
-from python.across_api.base.schema import PointSchema
 
+from ..base.schema import PointSchema
 from ..base.config import set_observatory
 from ..base.pointing import PointingBase
 from .config import FERMI
@@ -116,7 +116,3 @@ class FermiPointing(PointingBase):
         self.stepsize = self.entries[1].timestamp - self.entries[0].timestamp
 
         return True
-
-
-# Short hand aliases
-Pointing = FermiPointing

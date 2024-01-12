@@ -2,7 +2,6 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from datetime import datetime
 
 import astropy.units as u  # type: ignore
 from astropy.time import Time  # type: ignore
@@ -84,7 +83,7 @@ NUSTAR = {
         "tle_concat": "https://nustarsoc.caltech.edu/NuSTAR_Public/NuSTAROperationSite/NuSTAR.tle",
         "tle_url": None,
         # Set the following to NuSTAR's launch date
-        "tle_min_epoch": Time(datetime(2012, 6, 13, 0, 0, 0)),
+        "tle_min_epoch": Time("2012-06-13"),
     },
 }
 

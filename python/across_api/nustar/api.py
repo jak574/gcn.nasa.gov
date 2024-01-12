@@ -2,8 +2,8 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from ..base.api import DateRangeDep, EpochDep, RaDecDep, StepSizeDep, app
-from ..base.schema import EphemSchema, SAASchema, TLESchema, VisibilitySchema
+from ..base.api import DateRangeDep, RaDecDep, StepSizeDep, app, EpochDep
+from ..base.schema import EphemSchema, SAASchema, VisibilitySchema, TLESchema
 from .ephem import NuSTAREphem
 from .saa import NuSTARSAA
 from .tle import NuSTARTLE

@@ -2,11 +2,15 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from datetime import datetime
+
 from enum import Enum
-from typing import List, Optional, Union
+from typing import List, Optional
+
+import astropy.units as u  # type: ignore
 
 from ..base.schema import (
+    AstropySeconds,
+    AstropyTime,
     BaseSchema,
     DateRangeSchema,
     OptionalCoordSchema,
@@ -88,7 +92,7 @@ class BurstCubeTOOCoordSchema(OptionalPositionSchema):
     ...
 
 
-class BurstCubeTOOModelSchema(BurstCubeTOOCoordSchema):
+class BurstCubeTOOSchema(BurstCubeTOOCoordSchema):
     """
     Schema to retrieve all information about a BurstCubeTOO Request
 
@@ -130,79 +134,23 @@ class BurstCubeTOOModelSchema(BurstCubeTOOCoordSchema):
         Additional information about the BurstCubeTOO Request, by default ""
     """
 
-    id: Union[str, int, None] = None
+    id: Optional[str] = None
     username: str
-    timestamp: Optional[datetime] = None
+    timestamp: Optional[AstropyTime] = None
     trigger_mission: Optional[str] = None
     trigger_instrument: Optional[str] = None
     trigger_id: Optional[str] = None
-    trigger_time: Optional[datetime] = None
+    trigger_time: Optional[AstropyTime] = None
     trigger_duration: Optional[float] = None
     classification: Optional[str] = None
     justification: Optional[str] = None
-    begin: Optional[datetime] = None
-    end: Optional[datetime] = None
-    exposure: float = 200
-    offset: float = -50
+    begin: Optional[AstropyTime] = None
+    end: Optional[AstropyTime] = None
+    exposure: AstropySeconds
+    offset: AstropySeconds
     reason: TOOReason = TOOReason.none
     status: TOOStatus = TOOStatus.requested
     too_info: str = ""
-
-
-class BurstCubeTOOPutSchema(UserSchema, BurstCubeTOOCoordSchema):
-    """Schema to retrieve all information about a BurstCubeTOO Request
-
-    Parameters
-    ----------
-    id : Optional[int], optional
-        The ID of the BurstCubeTOO Request, by default None
-    username : str
-        The username associated with the BurstCubeTOO Request
-    timestamp : Optional[datetime], optional
-        The timestamp of the BurstCubeTOO Request, by default None
-    trigger_mission : Optional[str], optional
-        The mission associated with the trigger, by default None
-    trigger_instrument : Optional[str], optional
-        The instrument associated with the trigger, by default None
-    trigger_id : Optional[str], optional
-        The ID of the trigger, by default None
-    trigger_time : Optional[datetime], optional
-        The time of the trigger, by default None
-    trigger_duration : Optional[float], optional
-        The duration of the trigger, by default None
-    classification : Optional[str], optional
-        The classification of the trigger, by default None
-    justification : Optional[str], optional
-        The justification for the BurstCubeTOO Request, by default None
-    begin : Optional[datetime], optional
-        The start time of the BurstCubeTOO Request, by default None
-    end : Optional[datetime], optional
-        The end time of the BurstCubeTOO Request, by default None
-    exposure : Optional[float], optional
-        The exposure time of the BurstCubeTOO Request, by default None
-    offset : Optional[float], optional
-        The offset of the BurstCubeTOO Request, by default None
-    reason : TOOReason, optional
-        The reason for the BurstCubeTOO Request, by default TOOReason.none
-    status : TOOStatus, optional
-        The status of the BurstCubeTOO Request, by default TOOStatus.requested
-    """
-
-    id: Optional[int] = None
-    timestamp: Optional[datetime] = None
-    trigger_mission: Optional[str] = None
-    trigger_instrument: Optional[str] = None
-    trigger_id: Optional[str] = None
-    trigger_time: Optional[datetime] = None
-    trigger_duration: Optional[float] = None
-    classification: Optional[str] = None
-    justification: Optional[str] = None
-    begin: Optional[datetime] = None
-    end: Optional[datetime] = None
-    exposure: Optional[float] = None
-    offset: Optional[float] = None
-    reason: TOOReason = TOOReason.none
-    status: TOOStatus = TOOStatus.requested
 
 
 class BurstCubeTOODelSchema(UserSchema):
@@ -253,18 +201,14 @@ class BurstCubeTOOPostSchema(UserSchema, BurstCubeTOOCoordSchema):
     trigger_mission: str
     trigger_instrument: str
     trigger_id: str
-    trigger_time: datetime
+    trigger_time: AstropyTime
     trigger_duration: Optional[float] = 0
     classification: Optional[str] = None
     justification: Optional[str] = None
-    begin: Optional[datetime] = None
-    end: Optional[datetime] = None
-    exposure: float = 200
-    offset: float = -50
-
-
-class BurstCubeTOOSchema(BurstCubeTOOModelSchema):
-    ...
+    begin: Optional[AstropyTime] = None
+    end: Optional[AstropyTime] = None
+    exposure: AstropySeconds = 200 * u.s
+    offset: AstropySeconds = -50 * u.s
 
 
 class BurstCubeFOVCheckGetSchema(OptionalCoordSchema, DateRangeSchema):
@@ -282,7 +226,7 @@ class BurstCubeFOVCheckGetSchema(OptionalCoordSchema, DateRangeSchema):
     """
 
     healpix_loc: Optional[list] = None
-    stepsize: int = 60
+    stepsize: AstropySeconds
     earthoccult: bool = True
 
 
@@ -300,6 +244,19 @@ class BurstCubeFOVCheckSchema(BaseSchema):
 
 
 class BurstCubeTOOGetSchema(UserSchema):
+    """
+    Schema for BurstCubeTOO GET request.
+
+    Parameters
+    ----------
+    id : int
+        The ID of the BurstCube TOO.
+    """
+
+    id: str
+
+
+class BurstCubeTOOPutSchema(UserSchema):
     """
     Schema for BurstCubeTOO GET request.
 
@@ -342,7 +299,7 @@ class BurstCubeTOORequestsGetSchema(
         The maximum number of TOO requests to retrieve.
     """
 
-    trigger_time: Optional[datetime] = None
+    trigger_time: Optional[AstropyTime] = None
     trigger_mission: Optional[str] = None
     trigger_instrument: Optional[str] = None
     trigger_id: Optional[str] = None
@@ -355,8 +312,8 @@ class BurstCubeTOORequestsSchema(BaseSchema):
 
     Attributes
     ----------
-    entries : List[BurstCubeTOOModelSchema]
+    entries : List[BurstCubeTOOSchema]
         List of BurstCube TOOs.
     """
 
-    entries: List[BurstCubeTOOModelSchema]
+    entries: List[BurstCubeTOOSchema]

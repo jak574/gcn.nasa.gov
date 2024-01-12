@@ -124,7 +124,3 @@ class NICERVisibility(ACROSSAPIBase):
                 status_code=404,
                 detail="NICER visibility tool offline.",
             )
-
-
-# Mission specific names for classes
-Visibility = NICERVisibility

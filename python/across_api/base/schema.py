@@ -652,6 +652,19 @@ class MissionSchema(BaseSchema):
     website: AnyUrl
 
 
+class FOVCheckSchema(BaseSchema):
+    """
+    Schema for FOVCheck results.
+
+    Parameters
+    ----------
+    entries
+        List of FOVCheck entries.
+    """
+
+    entries: list  # FIXME: Add correct schema to list here
+
+
 class FOVOffsetSchema(BaseSchema):
     """
     Schema to define an angular and rotational offset from the spacecraft pointing direction for an instrument.

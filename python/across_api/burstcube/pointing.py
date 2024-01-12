@@ -2,8 +2,9 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from datetime import datetime
 
+from astropy.time import Time  # type: ignore
+import astropy.units as u  # type: ignore
 from ..base.config import set_observatory
 from ..base.pointing import PointingBase
 from .config import BURSTCUBE
@@ -16,9 +17,9 @@ class BurstCubePointing(PointingBase):
 
     Parameters
     ----------
-    begin : datetime
+    begin : Time
         Start time of pointing search
-    end : datetime
+    end : Time
         End time of pointing search
     stepsize : int
         Step size in seconds for pointing calculations
@@ -31,7 +32,7 @@ class BurstCubePointing(PointingBase):
         Status of pointing query
     """
 
-    def __init__(self, begin: datetime, end: datetime, stepsize: int = 60):
+    def __init__(self, begin: Time, end: Time, stepsize: u.Quantity = 60 * u.s):
         self.begin = begin
         self.end = end
         self.stepsize = stepsize
@@ -55,7 +56,3 @@ class BurstCubePointing(PointingBase):
             for t in self.times
         ]
         return True
-
-
-# Short hand aliases
-Pointing = BurstCubePointing

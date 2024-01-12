@@ -2,7 +2,7 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from datetime import datetime
+from astropy.time import Time  # type: ignore
 from typing import Optional, Union
 
 from ..across.user import check_api_key
@@ -28,9 +28,9 @@ class NICERPlan(PlanBase):
         Right Ascension in decimal degrees
     dec : Optional[float]
         Declination in decimal degrees
-    begin : Optional[datetime]
+    begin : Optional[Time]
         Start time of plan search
-    end : Optional[datetime]
+    end : Optional[Time]
         End time of plan search
     obsid : Optional[Union[int, list]]
         NICER Observation ID
@@ -53,8 +53,8 @@ class NICERPlan(PlanBase):
         api_key: str = "anonymous",
         ra: Optional[float] = None,
         dec: Optional[float] = None,
-        begin: Optional[datetime] = None,
-        end: Optional[datetime] = None,
+        begin: Optional[Time] = None,
+        end: Optional[Time] = None,
         obsid: Union[int, list, None] = None,
         targetid: Union[int, list, None] = None,
         radius: Optional[float] = None,
@@ -72,7 +72,7 @@ class NICERPlan(PlanBase):
         else:
             # Read instrument radius from FOV Config
             self.radius = self.config.instruments[0].fov.dimension
-        self.plan_max: Optional[datetime] = None
+        self.plan_max: Optional[Time] = None
         self.entries: list = []
 
     @check_api_key(anon=False, requser=["nicer", "jak51"])
