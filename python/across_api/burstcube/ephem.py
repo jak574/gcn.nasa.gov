@@ -11,6 +11,7 @@ from ..base.config import set_observatory
 from ..base.ephem import EphemBase
 from .config import BURSTCUBE
 from .tle import BurstCubeTLE
+from ..scheduling.orbit import TLE
 
 
 @cached(cache=TTLCache(maxsize=128, ttl=86400))
@@ -21,9 +22,8 @@ class BurstCubeEphem(EphemBase, ACROSSAPIBase):
     Satellite from TLE.
     """
 
-    # Configuration options
-    earth_radius = 70 * u.deg  # Fix 70 degree Earth radius
-
     def __init__(self, begin: Time, end: Time, stepsize: u.Quantity = 60 * u.s):
         self.tle = BurstCubeTLE(begin).tle
-        super().__init__(begin=begin, end=end, stepsize=stepsize)
+        if self.tle is not None:
+            self.satellite = TLE(self.tle.io)
+            super().__init__(begin=begin, end=end, stepsize=stepsize)

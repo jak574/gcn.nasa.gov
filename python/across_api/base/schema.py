@@ -2,8 +2,9 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
+import io
 from datetime import datetime
-from typing import Annotated, Any, List, Optional, Union
+from typing import IO, Annotated, Any, List, Optional, Union
 
 import astropy.units as u  # type: ignore
 from arc import tables  # type: ignore
@@ -496,6 +497,14 @@ class TLEEntry(BaseSchema):
         """Delete a TLE entry from the database."""
         table = tables.table(cls.__tablename__)
         return table.delete_item(Key={"satname": satname, "epoch": str(epoch)})
+
+    @property
+    def io(self) -> IO:
+        """
+        Return the file handle for the TLE database.
+        """
+        tletext = f"{self.satname}\n{self.tle1}\n{self.tle2}\n"
+        return io.BytesIO(tletext.encode())
 
 
 class TLESchema(BaseSchema):
