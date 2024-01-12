@@ -376,10 +376,3 @@ class BurstCubeTOO(ACROSSAPIBase):
         self.id = too.id
 
         return True
-
-
-# Short aliases for classes
-TOO = BurstCubeTOO
-TOOModelSchema = BurstCubeTOOSchema
-TOOPostSchema = BurstCubeTOOPostSchema
-TOOPutSchema = BurstCubeTOOPutSchema

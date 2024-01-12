@@ -8,13 +8,14 @@ from typing import Optional
 
 from arc import tables  # type: ignore
 from pydantic import computed_field
-
 from ..base.models import DynamoDBBase
-from ..base.schema import OptionalCoordSchema
+from ..base.schema import BaseSchema
 
 
-class BurstCubeTOOModel(OptionalCoordSchema, DynamoDBBase):
+class BurstCubeTOOModel(BaseSchema, DynamoDBBase):
     __tablename__ = "burstcube_too"
+    ra: Optional[Decimal] = None
+    dec: Optional[Decimal] = None
     username: str
     timestamp: str
     trigger_mission: str
@@ -29,7 +30,7 @@ class BurstCubeTOOModel(OptionalCoordSchema, DynamoDBBase):
     exposure: Decimal = Decimal(200)
     offset: Decimal = Decimal(-50)
     reason: str = "None"
-    too_status: str = "Requested"
+    status: str = "Requested"
     too_info: str = ""
 
     @computed_field  # type: ignore

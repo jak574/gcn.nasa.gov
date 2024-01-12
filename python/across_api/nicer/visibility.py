@@ -66,7 +66,3 @@ class NICERVisibility(VisibilityBase):
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="NICER visibility tool offline.",
             )
-
-
-# Mission specific names for classes
-Visibility = NICERVisibility

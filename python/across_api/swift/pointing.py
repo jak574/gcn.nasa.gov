@@ -100,7 +100,3 @@ class SwiftPointing(PointingBase):
                     )
                 )
         return True
-
-
-# Short hand aliases
-Pointing = SwiftPointing
