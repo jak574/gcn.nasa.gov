@@ -537,14 +537,15 @@ class SAAEntry(DateRangeSchema):
     """
 
     @property
-    def length(self) -> float:
+    def length(self) -> u.Quantity:
         """
         Calculate the length of the SAA passage in days.
 
-        Returns:
-            float: The length of the SAA passage in days.
+        Returns
+        -------
+            The length of the SAA passage
         """
-        return (self.end - self.begin).total_seconds() / 86400
+        return self.end - self.begin
 
 
 class SAASchema(BaseSchema):
