@@ -2,8 +2,9 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from astropy.time import Time  # type: ignore
 from typing import Optional, Union
+
+from astropy.time import Time  # type: ignore
 
 from ..across.user import check_api_key
 from ..base.config import set_observatory

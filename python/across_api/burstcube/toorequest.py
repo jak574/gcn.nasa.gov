@@ -10,12 +10,12 @@ import numpy as np  # type: ignore
 from astropy.coordinates import SkyCoord  # type: ignore
 from boto3.dynamodb.conditions import Key  # type: ignore
 from fastapi import HTTPException
-from python.across_api.base.schema import PointSchema
 
 from ..across.user import check_api_key
 from arc import tables  # type: ignore
 from ..base.common import ACROSSAPIBase
 from ..base.config import set_observatory
+from ..base.schema import PointSchema
 from ..burstcube.fov import BurstCubeFOVCheck
 from ..functions import round_time
 from .config import BURSTCUBE
