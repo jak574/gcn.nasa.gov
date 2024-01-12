@@ -8,6 +8,7 @@ from typing import Optional
 
 from arc import tables  # type: ignore
 from pydantic import computed_field
+
 from ..base.models import DynamoDBBase
 from ..base.schema import BaseSchema
 

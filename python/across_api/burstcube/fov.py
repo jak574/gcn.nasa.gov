@@ -5,9 +5,9 @@
 
 from typing import Optional
 
-from astropy.time import Time  # type: ignore
 import astropy.units as u  # type: ignore
 import numpy as np
+from astropy.time import Time  # type: ignore
 
 from ..base.config import set_observatory
 from ..base.fov import FOVCheckBase

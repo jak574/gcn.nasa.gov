@@ -12,9 +12,9 @@ from astropy.io import fits  # type: ignore
 from astropy.time import Time  # type: ignore
 from fastapi import HTTPException
 
-from ..base.schema import PointSchema
 from ..base.config import set_observatory
 from ..base.pointing import PointingBase
+from ..base.schema import PointSchema
 from .config import FERMI
 
 

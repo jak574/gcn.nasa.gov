@@ -3,8 +3,9 @@
 # All Rights Reserved.
 
 
-from astropy.time import Time  # type: ignore
 import astropy.units as u  # type: ignore
+from astropy.time import Time  # type: ignore
+
 from ..base.config import set_observatory
 from ..base.pointing import PointingBase
 from .config import BURSTCUBE

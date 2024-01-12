@@ -10,11 +10,11 @@ from arc import tables  # type: ignore
 from astropy.time import Time  # type: ignore
 from boto3.dynamodb.conditions import Key  # type: ignore
 from fastapi import HTTPException
-from python.across_api.base.schema import PointSchema
 
 from ..across.user import check_api_key
 from ..base.common import ACROSSAPIBase, round_time
 from ..base.config import set_observatory
+from ..base.schema import PointSchema
 from ..burstcube.fov import BurstCubeFOVCheck
 from .config import BURSTCUBE
 from .models import BurstCubeTOOModel
