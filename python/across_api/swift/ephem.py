@@ -10,7 +10,6 @@ from ..base.common import ACROSSAPIBase
 from ..base.config import set_observatory
 from ..base.ephem import EphemBase
 from .config import SWIFT
-from ..scheduling.orbit import TLE
 from .tle import SwiftTLE
 
 
@@ -25,5 +24,4 @@ class SwiftEphem(EphemBase, ACROSSAPIBase):
     def __init__(self, begin: Time, end: Time, stepsize: u.Quantity = 60 * u.s):
         self.tle = SwiftTLE(begin).tle
         if self.tle is not None:
-            self.satellite = TLE(self.tle.io)
             super().__init__(begin=begin, end=end, stepsize=stepsize)
