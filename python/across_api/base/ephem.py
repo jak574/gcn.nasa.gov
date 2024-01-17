@@ -7,8 +7,9 @@ from typing import Optional
 
 import astropy.units as u  # type: ignore
 import numpy as np
+from astroplan import Observer  # type: ignore
+from astropy.constants import R_earth  # type: ignore
 from astropy.coordinates import (  # type: ignore
-    GCRS,
     TEME,
     CartesianDifferential,
     CartesianRepresentation,
@@ -22,9 +23,6 @@ from astroplan import Observer  # type: ignore
 
 from ..base.schema import EphemGetSchema, EphemSchema, TLEEntry
 from .common import ACROSSAPIBase, round_time
-
-# Constants
-EARTH_RADIUS = 6371 * u.km  # km. Note this is average radius, as Earth is not a sphere.
 
 
 class EphemBase(ACROSSAPIBase):
@@ -188,9 +186,9 @@ class EphemBase(ACROSSAPIBase):
         # Calculate satellite position in GCRS coordinate system vector as
         # array of x,y,z vectors in units of km, and velocity vector as array
         # of x,y,z vectors in units of km/s
-        self.gcrs = self.itrs.transform_to(GCRS(obstime=self.timestamp))
-        self.posvec = self.gcrs.cartesian.without_differentials()
-        self.velvec = self.gcrs.velocity.to_cartesian()
+        self.posvec, self.velvec = self.observer.location.get_gcrs_posvel(
+            self.timestamp
+        )
 
         # Calculate the position of the Moon relative to the spacecraft
         self.moon = get_body("moon", self.timestamp, location=self.observer.location)
@@ -211,7 +209,7 @@ class EphemBase(ACROSSAPIBase):
         if self.earth_radius is not None:
             self.earthsize = self.earth_radius * np.ones(len(self))
         else:
-            self.earthsize = np.arcsin(EARTH_RADIUS / dist)
+            self.earthsize = np.arcsin(R_earth / dist)
 
         # Calculate orbit pole vector
         polevec = self.posvec.cross(self.velvec)
