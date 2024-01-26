@@ -65,7 +65,7 @@ OptionalTriggerTimeDep = Annotated[datetime, Depends(optional_trigger_time)]
 
 # BurstCube endpoints
 @app.get("/burstcube/ephem")
-async def burstcube_ephemeris(
+def burstcube_ephemeris(
     daterange: DateRangeDep,
     stepsize: StepSizeDep,
 ) -> EphemSchema:
@@ -224,7 +224,7 @@ async def burstcube_too_requests(
 
 
 @app.get("/burstcube/tle")
-async def burstcube_tle(
+def burstcube_tle(
     epoch: EpochDep,
 ) -> TLESchema:
     """
