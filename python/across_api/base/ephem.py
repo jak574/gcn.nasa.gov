@@ -18,7 +18,6 @@ from astropy.coordinates import (  # type: ignore
 from astropy.time import Time  # type: ignore
 from fastapi import HTTPException
 from sgp4.api import Satrec  # type: ignore
-from astroplan import Observer  # type: ignore
 
 from ..base.schema import EphemGetSchema, EphemSchema, TLEEntry
 from .common import ACROSSAPIBase, round_time

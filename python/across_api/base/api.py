@@ -26,7 +26,7 @@ app = FastAPI(
 )
 
 
-def epoch(
+async def epoch(
     epoch: Annotated[
         datetime,
         Query(
@@ -41,7 +41,8 @@ def epoch(
 EpochDep = Annotated[datetime, Depends(epoch)]
 
 
-def daterange(
+# Depends functions for FastAPI calls.
+async def daterange(
     begin: Annotated[
         datetime,
         Query(description="Start time of period to be calculated.", title="Begin"),

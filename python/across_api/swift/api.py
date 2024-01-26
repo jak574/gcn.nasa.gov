@@ -65,7 +65,7 @@ OptionalObsIdDep = Annotated[Optional[str], Depends(optional_obsid)]
 
 # Swift API Endpoints
 @app.get("/swift/ephem")
-def swift_ephemeris(
+async def swift_ephemeris(
     daterange: DateRangeDep,
     stepsize: StepSizeDep,
 ) -> EphemSchema:
@@ -186,7 +186,7 @@ async def swift_saa(daterange: DateRangeDep) -> SAASchema:
 
 
 @app.get("/swift/tle")
-def swift_tle(
+async def swift_tle(
     epoch: EpochDep,
 ) -> TLESchema:
     """
