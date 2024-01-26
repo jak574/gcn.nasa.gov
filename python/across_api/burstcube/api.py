@@ -222,6 +222,16 @@ async def burstcube_too_requests(
     ).schema
 
 
+@app.get("/burstcube/tle")
+async def burstcube_tle(
+    epoch: EpochDep,
+) -> TLESchema:
+    """
+    Returns the best TLE for BurstCube for a given epoch.
+    """
+    return BurstCubeTLE(epoch=epoch).schema
+
+
 @app.get("/burstcube/visibility")
 async def burstcube_visibility(
     daterange: DateRangeDep,
@@ -236,13 +246,3 @@ async def burstcube_visibility(
         ra=ra_dec["ra"],
         dec=ra_dec["dec"],
     ).schema
-
-
-@app.get("/burstcube/tle")
-async def burstcube_tle(
-    epoch: EpochDep,
-) -> TLESchema:
-    """
-    Returns the best TLE for BurstCube for a given epoch.
-    """
-    return BurstCubeTLE(epoch=epoch).schema

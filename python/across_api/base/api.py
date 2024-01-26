@@ -9,7 +9,8 @@ modules. Contains the FastAPI app definition.
 
 from fastapi import FastAPI, Query, Path, Depends
 from typing import Annotated, Optional
-from datetime import datetime, timezone
+from datetime import datetime
+from astropy.time import Time
 
 
 # FastAPI app definition
@@ -24,26 +25,6 @@ app = FastAPI(
 )
 
 
-def to_naive_utc(value: Optional[datetime]) -> Optional[datetime]:  #
-    """
-    Converts a datetime object to a naive datetime object in UTC timezone.
-
-    Arguments
-    ---------
-    value
-        The datetime object to be converted.
-
-    Returns
-    -------
-        The converted naive datetime object in UTC timezone.
-    """
-    if value is None:
-        return None
-
-    return value.astimezone(tz=timezone.utc).replace(tzinfo=None)
-
-
-# Globally defined Depends definitions
 async def epoch(
     epoch: Annotated[
         datetime,
@@ -52,8 +33,8 @@ async def epoch(
             description="Epoch in UTC or ISO format.",
         ),
     ],
-) -> Optional[datetime]:
-    return to_naive_utc(epoch)
+) -> Optional[Time]:
+    return Time(epoch)
 
 
 EpochDep = Annotated[datetime, Depends(epoch)]

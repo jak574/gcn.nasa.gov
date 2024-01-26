@@ -5,9 +5,12 @@ from typing import Annotated, Literal, Optional
 
 from fastapi import Depends, Query, status
 
+from python.across_api.swift.tle import SwiftTLE
+
 from ..base.api import (
     DateRangeDep,
     EarthOccultDep,
+    EpochDep,
     LoginDep,
     OptionalDateRangeDep,
     OptionalRaDecDep,
@@ -17,7 +20,7 @@ from ..base.api import (
     StepSizeDep,
     app,
 )
-from ..base.schema import EphemSchema, SAASchema, VisibilitySchema
+from ..base.schema import EphemSchema, SAASchema, TLESchema, VisibilitySchema
 from .ephem import SwiftEphem
 from .fov import SwiftFOVCheck
 from .observations import SwiftObservations
@@ -180,6 +183,16 @@ async def swift_saa(daterange: DateRangeDep) -> SAASchema:
     Endpoint for retrieving the times of Swift SAA passages for a given date range.
     """
     return SwiftSAA(**daterange).schema
+
+
+@app.get("/swift/tle")
+async def swift_tle(
+    epoch: EpochDep,
+) -> TLESchema:
+    """
+    Returns the best TLE for Swift for a given epoch.
+    """
+    return SwiftTLE(epoch=epoch).schema
 
 
 @app.get("/swift/visibility")
