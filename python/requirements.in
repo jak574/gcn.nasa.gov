@@ -4,7 +4,6 @@ cachetools
 email-validator
 fastapi
 mangum
-pyjwt
 requests
 shapely
 sqlalchemy
