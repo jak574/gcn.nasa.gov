@@ -9,6 +9,9 @@ import astropy.units as u  # type: ignore
 import numpy as np
 from astropy.coordinates import FK5, CartesianRepresentation, SkyCoord  # type: ignore
 from astropy.time import Time  # type: ignore
+from shapely import Polygon  # type: ignore
+
+from python.across_api.base.constraints import SAAPolygonConstraint  # type: ignore
 
 from ..functions import round_time
 from .common import ACROSSAPIBase
@@ -43,6 +46,7 @@ class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
     entries: list
     ra: float
     dec: float
+    saapoly: Polygon
 
     begin: datetime
     end: datetime
@@ -260,8 +264,6 @@ class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
                 return "Moon"
             elif self.inearthcons[index]:
                 return "Earth"
-            elif self.insaacons[index]:
-                return "SAA"
             else:
                 return "Unknown"
         else:
