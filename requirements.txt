@@ -6,4 +6,5 @@ pip-tools
 types-requests
 types-cachetools
 sqlalchemy-stubs
+types-python-jose
 -r python/requirements.txt
