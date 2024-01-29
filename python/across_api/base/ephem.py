@@ -134,10 +134,9 @@ class EphemBase(ACROSSAPIBase):
                 status_code=404, detail="No TLE available for this epoch"
             )
 
-        # Set up time array by default include a point for the end value also
-        self.timestamp = Time(
-            np.arange(self.begin, self.end + self.stepsize, self.stepsize)
-        )
+        # Round start and end times to stepsize, create array of timestamps
+        steps = int((self.end - self.begin).to(u.s) / (self.stepsize.to(u.s)) + 1)
+        self.timestamp = Time(np.linspace(self.begin, self.end, steps))
 
         # Load in the TLE data
         satellite = Satrec.twoline2rv(self.tle.tle1, self.tle.tle2)
@@ -184,9 +183,5 @@ class EphemBase(ACROSSAPIBase):
             self.earthsize = self.earth_radius * np.ones(len(self))
         else:
             self.earthsize = np.arcsin(R_earth / dist)
-
-        # Calculate orbit pole vector
-        polevec = self.posvec.cross(self.velvec)
-        self.pole = SkyCoord(polevec / polevec.norm())
 
         return True

@@ -86,9 +86,11 @@ AstropyAngle = Annotated[
 AstropyPositionVector = Annotated[
     Union[CartesianRepresentation, SkyCoord],
     PlainSerializer(
-        lambda x: x.xyz.to(u.km).value.T.tolist()
-        if type(x) is CartesianRepresentation
-        else x.cartesian.xyz.to(u.km).value.T.tolist(),
+        lambda x: (
+            x.xyz.to(u.km).value.T.tolist()
+            if type(x) is CartesianRepresentation
+            else x.cartesian.xyz.to(u.km).value.T.tolist()
+        ),
         return_type=List[conlist(float, min_length=3, max_length=3)],  # type: ignore
     ),
 ]
@@ -683,7 +685,6 @@ class EphemSchema(BaseSchema):
     timestamp: AstropyTimeList
     posvec: AstropyPositionVector
     earthsize: AstropyDegrees
-    pole: AstropyUnitVector
     velvec: AstropyVelocityVector
     sun: AstropyPositionVector
     moon: AstropyPositionVector
