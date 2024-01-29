@@ -178,11 +178,14 @@ async def swift_plan_upload(
 
 
 @app.get("/swift/saa")
-async def swift_saa(daterange: DateRangeDep) -> SAASchema:
+async def swift_saa(
+    daterange: DateRangeDep,
+    stepsize: StepSizeDep,
+) -> SAASchema:
     """
     Endpoint for retrieving the times of Swift SAA passages for a given date range.
     """
-    return SwiftSAA(**daterange).schema
+    return SwiftSAA(stepsize=stepsize, **daterange).schema
 
 
 @app.get("/swift/tle")

@@ -2,17 +2,18 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from functools import cached_property
+
 from typing import List, Optional
 
 import astropy.units as u  # type: ignore
+import numpy as np
 from astropy.time import Time  # type: ignore
-from shapely import Point, Polygon  # type: ignore
+from shapely import Polygon  # type: ignore
 
-from .common import ACROSSAPIBase
+from .common import ACROSSAPIBase, round_time
+from .constraints import SAAPolygonConstraint
 from .ephem import EphemBase
 from .schema import SAAEntry, SAAGetSchema, SAASchema
-from .window import MakeWindowBase
 
 
 class SAAPolygonBase:
@@ -28,7 +29,7 @@ class SAAPolygonBase:
 
     """
 
-    points: list = [
+    saapoly: Polygon = [
         (39.0, -30.0),
         (36.0, -26.0),
         (28.0, -21.0),
@@ -45,13 +46,8 @@ class SAAPolygonBase:
         (-83.0, -30.0),
     ]
 
-    saapoly: Polygon = Polygon(points)
 
-    def insaa(self, lat: float, lon: float) -> bool:
-        return self.saapoly.contains(Point(lat, lon))
-
-
-class SAABase(ACROSSAPIBase, MakeWindowBase):
+class SAABase(ACROSSAPIBase):
     """
     Class for SAA calculations.
 
@@ -84,6 +80,7 @@ class SAABase(ACROSSAPIBase, MakeWindowBase):
 
     begin: Time
     end: Time
+    timestamp: Time
 
     # Internal things
     saa: SAAPolygonBase
@@ -102,13 +99,16 @@ class SAABase(ACROSSAPIBase, MakeWindowBase):
         Initialize the SAA class.
         """
         # Parse parameters
-        self.begin = begin
-        self.end = end
+        self.begin = round_time(begin, stepsize)
+        self.end = round_time(end, stepsize)
         self.stepsize = stepsize
         if ephem is not None:
             self.ephem = ephem
             # Make sure stepsize matches supplied ephemeris
             self.stepsize = ephem.stepsize
+
+        # Set up SAA polygon
+        self.saacons = SAAPolygonConstraint(self.saa.saapoly)
 
         # If request validates, do a get
         if self.validate_get():
@@ -121,10 +121,15 @@ class SAABase(ACROSSAPIBase, MakeWindowBase):
         Returns
         -------
             Did the query succeed?
+        # Determine the times to calculate the SAA
+        steps = (self.end - self.begin).to(u.s) / (self.stepsize.to(u.s)) + 1
+        self.timestamp = Time(np.linspace(self.begin, self.end, steps))
+
         """
         # Calculate SAA windows
         self.entries = self.make_windows(
-            [not s for s in self.insaacons], wintype=SAAEntry
+            np.logical_not(self.saacons(times=self.timestamp, ephem=self.ephem)),
+            wintype=SAAEntry,
         )
 
         return True
@@ -144,23 +149,6 @@ class SAABase(ACROSSAPIBase, MakeWindowBase):
         """
         return True in [True for win in self.entries if t >= win.begin and t <= win.end]
 
-    @cached_property
-    def insaacons(self) -> list:
-        """
-        Calculate SAA constraint for each point in the ephemeris using SAA
-        Polygon.
-
-        Returns
-        -------
-        list
-            List of booleans indicating if the spacecraft is in the SAA
-
-        """
-        return [
-            self.saa.insaa(self.ephem.longitude[i].deg, self.ephem.latitude[i].deg)
-            for i in range(len(self.ephem))
-        ]
-
     @classmethod
     def insaa(cls, t: Time) -> bool:
         """
@@ -176,5 +164,43 @@ class SAABase(ACROSSAPIBase, MakeWindowBase):
             True if we're in the SAA, False otherwise
         """
         # Calculate an ephemeris for the exact time requested
+        cls.saacons = SAAPolygonConstraint(cls.saa.saapoly)
         ephem = cls.ephemclass(begin=t, end=t, stepsize=1e-6 * u.s)  # type: ignore
-        return cls.saa.insaa(ephem.longitude[0].deg, ephem.latitude[0].deg)
+        return cls.saacons(times=t, ephem=ephem)[0]
+
+    def make_windows(self, inconstraint: list, wintype=SAAEntry) -> list:
+        """
+        Record SAA windows from array
+
+        Parameters
+        ----------
+        inconstraint : list
+            List of booleans indicating if the spacecraft is in the SAA
+        wintype : VisWindow
+            Type of window to create (default: VisWindow)
+
+        Returns
+        -------
+        list
+            List of SAAEntry objects
+        """
+        windows = []
+        inocc = True
+        for i in range(len(inconstraint)):
+            if inocc is True and not inconstraint[i]:
+                inocc = False
+                inindex = i
+            if inocc is False and inconstraint[i]:
+                inocc = True
+                windows.append(
+                    wintype(
+                        begin=self.timestamp[inindex],
+                        end=self.timestamp[i - 1],
+                    )
+                )  # type: ignore
+
+        if not inocc:
+            win = wintype(begin=self.timestamp[inindex], end=self.timestamp[i])
+            if (win.end - win.begin).to(u.s) > 0:
+                windows.append(win)
+        return windows
