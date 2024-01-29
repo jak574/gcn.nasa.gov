@@ -9,6 +9,9 @@ import astropy.units as u  # type: ignore
 import numpy as np
 from astropy.coordinates import SkyCoord  # type: ignore
 from astropy.time import Time  # type: ignore
+from shapely import Polygon  # type: ignore
+
+from python.across_api.base.constraints import SAAPolygonConstraint  # type: ignore
 
 from .common import ACROSSAPIBase, round_time
 from .ephem import EphemBase
@@ -67,6 +70,7 @@ class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
     entries: List[VisWindow]
     ra: float
     dec: float
+    saapoly: Polygon
 
     begin: Time
     end: Time
@@ -150,33 +154,6 @@ class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
             ram_cons = self.ramsize + self.ramextra  # type: ignore
         # return the constraint
         return self.ramang < ram_cons
-
-    @cached_property
-    def inpolecons(self) -> np.ndarray:
-        """
-        Determine if a source is in pole constraint. Note this is only
-        important for spacecraft that have earth limb avoidance constraints
-        large enough so that a region around the orbit poles is not visible.
-
-        Returns
-        -------
-            An array of boolean values indicating whether each source is in
-            pole constraint.
-        """
-        # Determine the size of the pole constraint
-        pole_cons = self.ephem.earthsize[self.ephstart : self.ephstop] + (
-            self.earthoccult - 90 * u.deg
-        )  # type: ignore
-        if not self.isat:
-            pole_cons += self.earthextra
-
-        # Calculate the angular distance of the source from the North and South poles
-        pole_dist = self.ephem.pole[self.ephstart : self.ephstop].separation(
-            self.skycoord
-        )
-
-        # Create an array of pole constraints
-        return np.logical_or(pole_dist < pole_cons, pole_dist > 360 * u.deg - pole_cons)
 
     @cached_property
     def insuncons(self):
@@ -323,10 +300,6 @@ class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
         if self.sun_cons is True:
             self.inconstraint += self.insuncons
 
-        # Calculate Pole constraint
-        if self.pole_cons is True:
-            self.inconstraint += self.inpolecons
-
         # Calculate Ram constraint
         if self.ram_cons is True:
             self.inconstraint += self.inramcons
@@ -359,12 +332,8 @@ class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
                 return "Sun"
             elif self.inmooncons[index]:
                 return "Moon"
-            elif self.pole_cons and self.inpolecons[index]:
-                return "Pole"
             elif self.inearthcons[index]:
                 return "Earth"
-            elif self.insaacons[index]:
-                return "SAA"
             else:
                 return "Unknown"
         else:
@@ -381,4 +350,4 @@ class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
             within the SAA polygon.
 
         """
-        return np.array(self.saa.insaacons[self.ephstart : self.ephstop])
+        return SAAPolygonConstraint(self.saapoly)(self.timestamp, self.ephem)
