@@ -392,3 +392,19 @@ async def offset(
 OffsetDep = Annotated[float, Depends(offset)]
 
 ExposureDep = Annotated[float, Depends(exposure)]
+
+
+async def trigger_duration(
+    trigger_duration: Annotated[
+        Optional[float],
+        Query(
+            ge=0,
+            title="Trigger Duration",
+            description="Trigger Duration in seconds.",
+        ),
+    ] = None,
+) -> Optional[float]:
+    return trigger_duration
+
+
+DurationDep = Annotated[float, Depends(trigger_duration)]
