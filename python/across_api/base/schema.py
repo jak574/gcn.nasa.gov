@@ -856,8 +856,8 @@ class EphemConfigSchema(BaseSchema):
     parallax: bool
     apparent: bool
     velocity: bool
-    stepsize: int = 60
-    earth_radius: Optional[float] = (
+    stepsize: AstropySeconds
+    earth_radius: Optional[AstropyAngle] = (
         None  # if None, calculate it, if float, fix to this value
     )
 
