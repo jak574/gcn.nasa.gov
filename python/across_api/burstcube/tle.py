@@ -11,5 +11,4 @@ from ..burstcube.config import BURSTCUBE
 
 @cached(cache=TTLCache(maxsize=128, ttl=3600))
 @set_observatory(BURSTCUBE)
-class BurstCubeTLE(TLEBase):
-    ...
+class BurstCubeTLE(TLEBase): ...

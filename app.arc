@@ -54,6 +54,14 @@ acrossapi_users
   api_key String
   userlevel Number
 
+burstcube_too
+  id *String
+  created_on **String
+
+burstcube_too_history
+  id *String
+  modified_on **String
+
 sessions
   _idx *String
   _ttl TTL

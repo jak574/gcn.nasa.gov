@@ -15,9 +15,14 @@ from sqlalchemy.orm.base import Mapped  # type: ignore
 class DynamoDBBase:
     __tablename__: str
 
-    def save(self):
-        table = tables.table(self.__tablename__)
-        table.put_item(Item=self.model_dump())
+    def save(self, history: bool = False):
+        if history is True:
+            # History table needs to be created (in app.arc) alongside regular
+            # table if we are going to record historic values of entries.
+            table = tables.table(self.__tablename__ + "_history")
+        else:
+            table = tables.table(self.__tablename__)
+        table.put_item(Item=self.model_dump())  # type: ignore
 
     @classmethod
     def get_by_key(cls, value: str, key: str):

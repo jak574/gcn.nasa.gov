@@ -5,7 +5,6 @@
 import hashlib
 from decimal import Decimal
 from typing import Optional
-
 from arc import tables  # type: ignore
 from pydantic import computed_field
 
@@ -17,8 +16,11 @@ class BurstCubeTOOModel(BaseSchema, DynamoDBBase):
     __tablename__ = "burstcube_too"
     ra: Optional[Decimal] = None
     dec: Optional[Decimal] = None
-    username: str
-    timestamp: str
+    error_radius: Optional[Decimal] = None
+    created_by: str  # sub claim of the JWT access token
+    created_on: str  # ISO 8601 format datetime of creation
+    modified_on: str  # ISO 8601 format datetime of last modification
+    modified_by: str  # sub claim of the JWT access token
     trigger_mission: str
     trigger_instrument: str
     trigger_id: str
@@ -30,7 +32,7 @@ class BurstCubeTOOModel(BaseSchema, DynamoDBBase):
     end: Optional[str] = None
     exposure: Decimal = Decimal(200)
     offset: Decimal = Decimal(-50)
-    reason: str = "None"
+    reject_reason: str = "None"
     status: str = "Requested"
     too_info: str = ""
 
