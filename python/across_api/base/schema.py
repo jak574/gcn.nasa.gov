@@ -585,7 +585,7 @@ class SAAGetSchema(DateRangeSchema):
 
 
 # Pointing Schemas
-class PointSchema(OptionalCoordSchema):
+class PointSchema(BaseSchema):
     """
     Schema defining a spacecraft pointing
 
@@ -608,8 +608,11 @@ class PointSchema(OptionalCoordSchema):
     """
 
     timestamp: AstropyTime
-    roll: Optional[float] = None
+    ra_point: Optional[float] = None
+    dec_point: Optional[float] = None
+    roll_point: Optional[float] = None
     observing: bool
+    probability: Optional[float] = None
     infov: Union[bool, float, None] = None
 
 
