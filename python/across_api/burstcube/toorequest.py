@@ -33,6 +33,7 @@ from .schema import (
     TOOReason,
     TOOStatus,
 )
+from datetime import datetime
 
 
 @set_observatory(BURSTCUBE)
@@ -42,9 +43,9 @@ class BurstCubeTOO(ACROSSAPIBase):
 
     Parameters
     ----------
-    username : str
-        Username of user making request
-    api_key : str
+    created_by
+        created_by of user making request
+    api_key
         API key of user making request
     id : Optional[int], optional
         ID of BurstCubeTOO to fetch, by default None
@@ -57,8 +58,8 @@ class BurstCubeTOO(ACROSSAPIBase):
     _post_schema = BurstCubeTOOPostSchema
 
     id: Optional[str]
-    username: str
-    timestamp: Optional[datetime]
+    created_by: str
+    created_on: Optional[Time]
     ra: Optional[float]
     dec: Optional[float]
     error: Optional[float]
@@ -87,7 +88,7 @@ class BurstCubeTOO(ACROSSAPIBase):
         self.healpix_loc = None
         self.healpix_order = "nested"
         self.id = None
-        self.timestamp = None
+        self.created_on = None
         self.too_info = ""
         self.warnings = []
 
@@ -132,7 +133,7 @@ class BurstCubeTOO(ACROSSAPIBase):
     @check_api_key(anon=False)
     def delete(self) -> bool:
         """
-        Delete a given too, specified by id. sub of BurstCubeTOO has to match yours.
+        Delete a given too, specified by id. created_by of BurstCubeTOO has to match yours.
 
         Returns
         -------
@@ -140,9 +141,9 @@ class BurstCubeTOO(ACROSSAPIBase):
             Did this work? True | False
         """
         if self.validate_del():
-            sub = self.sub
+            created_by = self.created_by
             if self.get():
-                if self.sub != sub:
+                if self.created_by != created_by:
                     raise HTTPException(401, "BurstCubeTOO not owned by user.")
 
                 response = self.table.delete_item(Key={"id": self.id})
@@ -238,18 +239,29 @@ class BurstCubeTOO(ACROSSAPIBase):
             return self.post()
 
         # If id is given, assume we're modifying an existing BurstCubeTOO.
-        # Check if this BurstCubeTOO exists and is of the same username
+        # Check if this BurstCubeTOO exists and is of the same created_by
+        previous_request = self.table.get_item(Key={"id": self.id})
 
         response = self.table.delete_item(Key={"id": self.id})
         # Check if the TOO exists
-        if "Item" not in response:
+        if "Item" not in previous_request:
             raise HTTPException(404, "BurstCubeTOO not found.")
 
-        # Check if the sub matches
-        if response["Item"]["sub"] != self.sub:
+        # Check if the created_by matches
+        if previous_request["Item"]["created_by"] != self.created_by:
             raise HTTPException(401, "BurstCubeTOO not owned by user.")
 
+        # Save previous request to history
+        prevtoo = BurstCubeTOOModel.model_validate(**previous_request["Item"])
+        prevtoo.save(history=True)
+
+        # Update modified_on and modified_by
+        self.modified_on = str(datetime.now())
+        self.modified_by = self.created_by
+
         # Write BurstCubeTOO to the database
+        self.table.delete_item(Key={"id": self.id})
+
         too = BurstCubeTOOModel(**self.schema.model_dump(mode="json"))
         too.save()
 
@@ -369,10 +381,8 @@ class BurstCubeTOO(ACROSSAPIBase):
         self.too_info = self.too_info + " ".join(self.warnings)
 
         # Write BurstCubeTOO to the database
-        self.timestamp = datetime.utcnow()
-        too = BurstCubeTOOModel(
-            **BurstCubeTOOModelSchema.model_validate(self).model_dump(mode="json")
-        )
+        self.created_on = Time.now()
+        too = BurstCubeTOOModel(**self.schema.model_dump(mode="json"))
 
         too.save()
         self.id = too.id

@@ -89,10 +89,10 @@ class BurstCubeTOOSchema(OptionalPositionSchema):
     ----------
     id : Optional[int], optional
         The ID of the BurstCubeTOO Request, by default None
-    sub : str
-        The authentication sub associated with the BurstCubeTOO Request
-    timestamp : Optional[datetime], optional
-        The timestamp of the BurstCubeTOO Request, by default None
+    created_by : str
+        The authentication created_by associated with the BurstCubeTOO Request
+    created_on : Optional[datetime], optional
+        The created_on of the BurstCubeTOO Request, by default None
     trigger_mission : Optional[str], optional
         The mission associated with the trigger, by default None
     trigger_instrument : Optional[str], optional
@@ -124,8 +124,8 @@ class BurstCubeTOOSchema(OptionalPositionSchema):
     """
 
     id: Optional[str] = None
-    sub: str
-    timestamp: Optional[AstropyTime] = None
+    created_by: str
+    created_on: Optional[AstropyTime] = None
     trigger_mission: Optional[str] = None
     trigger_instrument: Optional[str] = None
     trigger_id: Optional[str] = None
@@ -155,12 +155,12 @@ class BurstCubeTOODelSchema(BaseSchema):
 
 class BurstCubeTOOPostSchema(OptionalPositionSchema):
     """
-    Schema to submit a TOO request for BurstCube.
+    Schema to created_bymit a TOO request for BurstCube.
 
     Parameters
     ----------
-    sub : str
-        The authentication sub associated with the request.
+    created_by : str
+        The authentication created_by associated with the request.
     trigger_mission : str
         The mission associated with the trigger.
     trigger_instrument : str
