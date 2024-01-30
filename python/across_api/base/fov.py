@@ -729,6 +729,7 @@ class FOVCheckBase(ACROSSAPIBase):
     entries: list
     config: ConfigSchema
     instrument: str
+    minprob: float = 0.1  # Minimum probability to consider in FOV
 
     def get(self):
         """
@@ -753,21 +754,29 @@ class FOVCheckBase(ACROSSAPIBase):
                 earth_size = None
 
             # Set the Spacecraft pointing direction
-            self.fov.point(point.ra, point.dec, point.roll)
+            self.fov.point(point.ra_point, point.dec_point, point.roll_point)
 
             # If we gave a HEALpix map, calculate the probability inside the FOV
             if self.healpix_loc is not None:
-                point.infov = self.fov.infov_hp(
+                point.probability = self.fov.infov_hp(
                     healpix_loc=self.healpix_loc,
                     healpix_order=self.healpix_order,
                     earth=earth,
                     earth_size=earth_size,
                 )
+                if point.probabilty > self.minprob:
+                    point.infov = True
+                else:
+                    point.infov = False
             else:
                 # Is the target inside the FOV?
                 point.infov = self.fov.infov(
                     ra=self.ra, dec=self.dec, earth=earth, earth_size=earth_size
                 )
+                if point.infov:
+                    point.probability = 1.0
+                else:
+                    point.probability = 0.0
 
     def infov(self, trigger_time: Time) -> Union[bool, PointSchema]:
         """
