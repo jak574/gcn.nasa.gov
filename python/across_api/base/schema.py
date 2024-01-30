@@ -66,9 +66,9 @@ AstropyTimeList = Annotated[
 AstropyDegrees = Annotated[
     Union[Latitude, Longitude, u.Quantity],
     PlainSerializer(
-        lambda x: x.deg.tolist()
-        if type(x) is not u.Quantity
-        else x.to(u.deg).value.tolist(),
+        lambda x: (
+            x.deg.tolist() if type(x) is not u.Quantity else x.to(u.deg).value.tolist()
+        ),
         return_type=List[float],
     ),
 ]
@@ -872,9 +872,9 @@ class EphemConfigSchema(BaseSchema):
     apparent: bool
     velocity: bool
     stepsize: AstropySeconds
-    earth_radius: Optional[
-        AstropyAngle
-    ] = None  # if None, calculate it, if float, fix to this value
+    earth_radius: Optional[AstropyAngle] = (
+        None  # if None, calculate it, if float, fix to this value
+    )
 
 
 class VisibilityConfigSchema(BaseSchema):

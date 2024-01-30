@@ -38,7 +38,7 @@ def swift_instrument_query(
             title="Instrument",
             description="Instrument to use in FOV calculation.",
         ),
-    ] = "XRT"
+    ] = "XRT",
 ) -> dict:
     return {"instrument": instrument}
 
