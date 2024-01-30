@@ -121,11 +121,11 @@ class SAABase(ACROSSAPIBase):
         Returns
         -------
             Did the query succeed?
+        """
         # Determine the times to calculate the SAA
         steps = (self.end - self.begin).to(u.s) / (self.stepsize.to(u.s)) + 1
         self.timestamp = Time(np.linspace(self.begin, self.end, steps))
 
-        """
         # Calculate SAA windows
         self.entries = self.make_windows(
             np.logical_not(self.saacons(times=self.timestamp, ephem=self.ephem)),
