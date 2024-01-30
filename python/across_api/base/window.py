@@ -63,7 +63,12 @@ class MakeWindowBase:
                 )  # type: ignore
 
         if not inocc:
-            win = wintype(begin=self.ephem.timestamp[inindex], end=self.ephem.timestamp[i], initial=self.constraint(inindex - 1), final=self.constraint(i))  # type: ignore
+            win = wintype(
+                begin=self.ephem.timestamp[inindex],
+                end=self.ephem.timestamp[i],
+                initial=self.constraint(inindex - 1),
+                final=self.constraint(i),
+            )  # type: ignore
             if (win.end - win.begin).to(u.s) > 0:
                 windows.append(win)
         return windows
