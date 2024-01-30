@@ -11,7 +11,7 @@ from astropy.coordinates import FK5, CartesianRepresentation, SkyCoord  # type: 
 from astropy.time import Time  # type: ignore
 from shapely import Polygon  # type: ignore
 
-from python.across_api.base.constraints import SAAPolygonConstraint  # type: ignore
+from .constraints import SAAPolygonConstraint  # type: ignore
 
 from ..functions import round_time
 from .common import ACROSSAPIBase
