@@ -3,13 +3,13 @@
 # All Rights Reserved.
 
 
-from typing import List, Optional
+from typing import List, Optional, Type
 
 import astropy.units as u  # type: ignore
 import numpy as np
 from astropy.time import Time  # type: ignore
 
-from .common import ACROSSAPIBase, round_time
+from .common import ACROSSAPIBase, ceil_time, floor_time, round_time
 from .constraints import SAAPolygonConstraint
 from .ephem import EphemBase
 from .schema import SAAEntry, SAAGetSchema, SAASchema
@@ -57,6 +57,7 @@ class SAABase(ACROSSAPIBase):
 
     stepsize: u.Quantity
     entries: List[SAAEntry]  # type: ignore
+    ephemclass: Type[EphemBase]
 
     def __init__(
         self,
@@ -68,14 +69,23 @@ class SAABase(ACROSSAPIBase):
         """
         Initialize the SAA class.
         """
-        # Parse parameters
+        # Round start and end times to stepsize resolution
         self.begin = round_time(begin, stepsize)
         self.end = round_time(end, stepsize)
         self.stepsize = stepsize
-        if ephem is not None:
-            self.ephem = ephem
+
+        # Instantiate the ephem class here if not passed as an argument. By
+        # default we'll calculate ephem for a whole day, to aide with caching.
+        if ephem is None:
+            ephem = self.ephemclass(
+                begin=floor_time(self.begin, 1 * u.day),
+                end=ceil_time(self.end, 1 * u.day),
+                stepsize=self.stepsize,
+            )
+        else:
             # Make sure stepsize matches supplied ephemeris
             self.stepsize = ephem.stepsize
+        self.ephem = ephem
 
         # If request validates, do a get
         if self.validate_get():

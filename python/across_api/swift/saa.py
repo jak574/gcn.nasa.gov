@@ -2,12 +2,8 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from typing import Optional
+from typing import Type
 
-import astropy.units as u  # type: ignore
-from astropy.time import Time  # type: ignore
-
-from ..base.common import ceil_time, floor_time, round_time
 from ..base.constraints import SAAPolygonConstraint  # type: ignore
 from ..base.saa import SAABase
 from .ephem import SwiftEphem
@@ -38,32 +34,12 @@ class SwiftSAA(SAABase):
         ]
     )
 
-    def __init__(
-        self,
-        begin: Time,
-        end: Time,
-        ephem: Optional[SwiftEphem] = None,
-        stepsize: u.Quantity = 60 * u.s,
-    ):
+    def __init__(self, ephemclass: Type[SwiftEphem] = SwiftEphem, **kwargs):
         """
-        Initialize the SAA class. Set up the Ephemeris if it's not given.
+        Initialize the SAA class, passing the appropriate ephem class for this mission.
         """
-        # Round start and end times to stepsize resolution
-        self.begin = round_time(begin, stepsize)
-        self.end = round_time(end, stepsize)
-        self.stepsize = stepsize
-
-        # Instantiate the ephem class here if not passed as an argument. By
-        # default we'll calculate ephem for a whole day, to aide with caching.
-        if ephem is None:
-            ephem = SwiftEphem(
-                begin=floor_time(self.begin, 1 * u.day),
-                end=ceil_time(self.end, 1 * u.day),
-                stepsize=self.stepsize,
-            )
-        self.ephem = ephem
+        # Set up the ephemeris class to use
+        self.ephemclass = ephemclass
 
         # Calculate the SAA entries
-        super().__init__(
-            begin=self.begin, end=self.end, ephem=self.ephem, stepsize=self.stepsize
-        )
+        super().__init__(**kwargs)
