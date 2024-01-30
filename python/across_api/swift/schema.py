@@ -11,7 +11,6 @@ from ..base.schema import (
     PlanEntryBase,
     PlanGetSchemaBase,
     PlanSchemaBase,
-    UserSchema,
 )
 
 
@@ -30,7 +29,7 @@ class SwiftPlanGetSchema(PlanGetSchemaBase):
     pass
 
 
-class SwiftPlanPutSchema(UserSchema):
+class SwiftPlanPutSchema(BaseSchema):
     entries: List[SwiftPlanEntry]
 
 
@@ -58,7 +57,7 @@ class SwiftObservationsGetSchema(PlanGetSchemaBase):
     pass
 
 
-class SwiftObservationsPutSchema(UserSchema):
+class SwiftObservationsPutSchema(BaseSchema):
     entries: List[SwiftObsEntry]
     pass
 

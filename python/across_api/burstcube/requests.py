@@ -10,7 +10,6 @@ from astropy.coordinates import SkyCoord  # type: ignore
 from astropy.time import Time  # type: ignore
 from boto3.dynamodb.conditions import Key  # type: ignore
 
-from ..across.user import check_api_key
 from ..base.common import ACROSSAPIBase
 from .schema import (
     BurstCubeTOORequestsGetSchema,
@@ -28,10 +27,6 @@ class BurstCubeTOORequests(ACROSSAPIBase):
 
     Parameters
     ----------
-    username
-        Username for API
-    api_key
-        API Key for user
     begin
         Start time of plan search
     end
@@ -73,8 +68,6 @@ class BurstCubeTOORequests(ACROSSAPIBase):
 
     def __init__(
         self,
-        username: str,
-        api_key: str,
         begin: Optional[Time] = None,
         end: Optional[Time] = None,
         limit: Optional[int] = None,
@@ -87,8 +80,6 @@ class BurstCubeTOORequests(ACROSSAPIBase):
         radius: Optional[float] = None,
     ):
         # Default parameters
-        self.username = username
-        self.api_key = api_key
         self.trigger_time = trigger_time
         self.trigger_instrument = trigger_instrument
         self.trigger_mission = trigger_mission
@@ -106,7 +97,6 @@ class BurstCubeTOORequests(ACROSSAPIBase):
         if self.validate_get():
             self.get()
 
-    @check_api_key(anon=False)
     def get(self) -> bool:
         """
         Get a list of BurstCubeTOO requests

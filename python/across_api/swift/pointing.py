@@ -79,7 +79,11 @@ class SwiftPointing(PointingBase):
             if ent is None:
                 self.entries.append(
                     PointSchema(
-                        timestamp=t, ra=None, dec=None, roll=None, observing=True
+                        timestamp=t,
+                        ra_point=None,
+                        dec_point=None,
+                        roll_point=None,
+                        observing=True,
                     )
                 )
             else:
@@ -93,9 +97,9 @@ class SwiftPointing(PointingBase):
                 self.entries.append(
                     PointSchema(
                         timestamp=t,
-                        ra=ent.ra,
-                        dec=ent.dec,
-                        roll=ent.roll,
+                        ra_point=ent.ra,
+                        dec_point=ent.dec,
+                        roll_point=ent.roll,
                         observing=observing,
                     )
                 )

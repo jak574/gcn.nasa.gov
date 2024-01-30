@@ -109,7 +109,7 @@ class FermiPointing(PointingBase):
             ra = self.hdu[1].data["RA_SCZ"][i]
             dec = self.hdu[1].data["DEC_SCZ"][i]
             self.entries.append(
-                PointSchema(timestamp=t, ra=ra, dec=dec, observing=True)
+                PointSchema(timestamp=t, ra_point=ra, dec_point=dec, observing=True)
             )
 
         # Set the stepsize, should be 60s for Fermi FT2 files

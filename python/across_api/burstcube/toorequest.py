@@ -69,8 +69,7 @@ class BurstCubeTOO(ACROSSAPIBase):
     trigger_duration: Optional[float]
     classification: Optional[str]
     justification: Optional[str]
-    begin: Optional[Time]
-    end: Optional[Time]
+    begin: u.Quantity
     exposure: u.Quantity
     offset: float
     reason: TOOReason
@@ -81,10 +80,8 @@ class BurstCubeTOO(ACROSSAPIBase):
     too_info: str
     warnings: list
 
-    def __init__(self, username: str, api_key: str, id: Optional[str] = None, **kwargs):
+    def __init__(self, id: Optional[str] = None, **kwargs):
         # Set Optional Parameters to None
-        self.begin = None
-        self.end = None
         self.ra = None
         self.dec = None
         self.healpix_loc = None
@@ -101,8 +98,6 @@ class BurstCubeTOO(ACROSSAPIBase):
         # Status of job
 
         # Parse Arguments
-        self.username = username
-        self.api_key = api_key
         self.id = id
         # Connect to the DynamoDB table
         self.table = tables.table("burstcube_too")
@@ -137,7 +132,7 @@ class BurstCubeTOO(ACROSSAPIBase):
     @check_api_key(anon=False)
     def delete(self) -> bool:
         """
-        Delete a given too, specified by id. username of BurstCubeTOO has to match yours.
+        Delete a given too, specified by id. sub of BurstCubeTOO has to match yours.
 
         Returns
         -------
@@ -145,9 +140,9 @@ class BurstCubeTOO(ACROSSAPIBase):
             Did this work? True | False
         """
         if self.validate_del():
-            username = self.username
+            sub = self.sub
             if self.get():
-                if self.username != username:
+                if self.sub != sub:
                     raise HTTPException(401, "BurstCubeTOO not owned by user.")
 
                 response = self.table.delete_item(Key={"id": self.id})
@@ -250,8 +245,8 @@ class BurstCubeTOO(ACROSSAPIBase):
         if "Item" not in response:
             raise HTTPException(404, "BurstCubeTOO not found.")
 
-        # Check if the username matches
-        if response["Item"]["username"] != self.username:
+        # Check if the sub matches
+        if response["Item"]["sub"] != self.sub:
             raise HTTPException(401, "BurstCubeTOO not owned by user.")
 
         # Write BurstCubeTOO to the database

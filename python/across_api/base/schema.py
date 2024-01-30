@@ -60,9 +60,9 @@ AstropyTimeList = Annotated[
 AstropyDegrees = Annotated[
     Union[Latitude, Longitude, u.Quantity],
     PlainSerializer(
-        lambda x: x.deg.tolist()
-        if type(x) is not u.Quantity
-        else x.to(u.deg).value.tolist(),
+        lambda x: (
+            x.deg.tolist() if type(x) is not u.Quantity else x.to(u.deg).value.tolist()
+        ),
         return_type=List[float],
     ),
 ]
@@ -80,9 +80,11 @@ AstropyAngle = Annotated[
 AstropyPositionVector = Annotated[
     Union[CartesianRepresentation, SkyCoord],
     PlainSerializer(
-        lambda x: x.xyz.to(u.km).value.T.tolist()
-        if type(x) is CartesianRepresentation
-        else x.cartesian.xyz.to(u.km).value.T.tolist(),
+        lambda x: (
+            x.xyz.to(u.km).value.T.tolist()
+            if type(x) is CartesianRepresentation
+            else x.cartesian.xyz.to(u.km).value.T.tolist()
+        ),
         return_type=List[conlist(float, min_length=3, max_length=3)],  # type: ignore
     ),
 ]
@@ -235,7 +237,7 @@ class OptionalPositionSchema(OptionalCoordSchema):
         The error associated with the position. Defaults to None.
     """
 
-    error: Optional[float] = None
+    error_radius: Optional[float] = None
 
 
 class DateRangeSchema(BaseSchema):
@@ -272,6 +274,61 @@ class DateRangeSchema(BaseSchema):
 
 class TLEGetSchema(BaseSchema):
     epoch: AstropyTime
+
+
+class VisWindow(DateRangeSchema):
+    """
+    Represents a visibility window.
+
+    Parameters
+    ----------
+    begin
+        The beginning of the window.
+    end
+        The end of the window.
+    initial
+        The main constraint that ends at the beginning of the window.
+    final
+        The main constraint that begins at the end of the window.
+    """
+
+    initial: str
+    final: str
+
+
+class VisibilitySchema(BaseSchema):
+    """
+    Schema for visibility classes.
+
+    Parameters
+    ----------
+    entries: List[VisWindow]
+        List of visibility windows.
+
+        Information about the job status.
+    """
+
+    entries: List[VisWindow]
+
+
+class VisibilityGetSchema(CoordSchema, DateRangeSchema):
+    """
+    Schema for getting visibility data.
+
+    Parameters
+    ----------
+    stepsize
+        The step size in seconds for the visibility data.
+
+    Inherits
+    --------
+    CoordSchema
+        Schema for coordinate data.
+    DateRangeSchema
+        Schema for date range data.
+    """
+
+    stepsize: AstropySeconds
 
 
 class TLEEntry(BaseSchema):
@@ -800,9 +857,9 @@ class EphemConfigSchema(BaseSchema):
     apparent: bool
     velocity: bool
     stepsize: int = 60
-    earth_radius: Optional[
-        float
-    ] = None  # if None, calculate it, if float, fix to this value
+    earth_radius: Optional[float] = (
+        None  # if None, calculate it, if float, fix to this value
+    )
 
 
 class VisibilityConfigSchema(BaseSchema):

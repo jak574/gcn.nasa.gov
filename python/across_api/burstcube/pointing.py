@@ -53,7 +53,9 @@ class BurstCubePointing(PointingBase):
         # BurstCube isn't a pointed instrument, so these are just dummy values. Note that they
         # have to be not None otherwise FOVCheck will think the spacecraft isn't observing.
         self.entries = [
-            PointSchema(timestamp=t, ra=0, dec=0, roll=0, observing=True)
+            PointSchema(
+                timestamp=t, ra_point=0, dec_point=0, roll_point=0, observing=True
+            )
             for t in self.times
         ]
         return True
