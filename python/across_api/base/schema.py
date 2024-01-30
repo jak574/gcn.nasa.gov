@@ -240,7 +240,7 @@ class OptionalPositionSchema(OptionalCoordSchema):
         The error associated with the position. Defaults to None.
     """
 
-    error: Optional[float] = None
+    error_radius: Optional[float] = None
 
 
 class DateRangeSchema(BaseSchema):
@@ -329,22 +329,6 @@ class OptionalDateRangeSchema(BaseSchema):
             assert data.begin <= data.end, "End date should not be before begin"
 
         return data
-
-
-class UserSchema(BaseSchema):
-    """
-    Username/API key Schema for API calls that require authentication
-
-    Parameters
-    ----------
-    username
-        The username for authentication.
-    api_key
-        The API key for authentication.
-    """
-
-    username: str
-    api_key: str
 
 
 class VisWindow(DateRangeSchema):

@@ -17,7 +17,6 @@ from ..base.schema import (
     OptionalDateRangeSchema,
     OptionalPositionSchema,
     PointSchema,
-    UserSchema,
 )
 
 
@@ -69,6 +68,8 @@ class TOOStatus(str, Enum):
         The TOO request has been executed.
     other : str
         The TOO request has a status other than the predefined ones.
+    deleted : str
+        The TOO request has been deleted.
     """
 
     requested = "Requested"
@@ -76,23 +77,11 @@ class TOOStatus(str, Enum):
     declined = "Declined"
     approved = "Approved"
     executed = "Executed"
+    deleted = "Deleted"
     other = "Other"
 
 
-class BurstCubeTOOCoordSchema(OptionalPositionSchema):
-    """
-    Schema for BurstCube Target of Opportunity (TOO) coordinates.
-
-    Inherits
-    --------
-    OptionalPositionSchema : schema
-        Schema for the position of a target with circular error.
-    """
-
-    ...
-
-
-class BurstCubeTOOSchema(BurstCubeTOOCoordSchema):
+class BurstCubeTOOSchema(OptionalPositionSchema):
     """
     Schema to retrieve all information about a BurstCubeTOO Request
 
@@ -100,8 +89,8 @@ class BurstCubeTOOSchema(BurstCubeTOOCoordSchema):
     ----------
     id : Optional[int], optional
         The ID of the BurstCubeTOO Request, by default None
-    username : str
-        The username associated with the BurstCubeTOO Request
+    sub : str
+        The authentication sub associated with the BurstCubeTOO Request
     timestamp : Optional[datetime], optional
         The timestamp of the BurstCubeTOO Request, by default None
     trigger_mission : Optional[str], optional
@@ -135,7 +124,7 @@ class BurstCubeTOOSchema(BurstCubeTOOCoordSchema):
     """
 
     id: Optional[str] = None
-    username: str
+    sub: str
     timestamp: Optional[AstropyTime] = None
     trigger_mission: Optional[str] = None
     trigger_instrument: Optional[str] = None
@@ -144,16 +133,14 @@ class BurstCubeTOOSchema(BurstCubeTOOCoordSchema):
     trigger_duration: Optional[float] = None
     classification: Optional[str] = None
     justification: Optional[str] = None
-    begin: Optional[AstropyTime] = None
-    end: Optional[AstropyTime] = None
+    begin: AstropySeconds
     exposure: AstropySeconds
-    offset: AstropySeconds
-    reason: TOOReason = TOOReason.none
+    reject_reason: TOOReason = TOOReason.none
     status: TOOStatus = TOOStatus.requested
     too_info: str = ""
 
 
-class BurstCubeTOODelSchema(UserSchema):
+class BurstCubeTOODelSchema(BaseSchema):
     """
     Schema for BurstCubeTOO DELETE API call.
 
@@ -166,14 +153,14 @@ class BurstCubeTOODelSchema(UserSchema):
     id: str
 
 
-class BurstCubeTOOPostSchema(UserSchema, BurstCubeTOOCoordSchema):
+class BurstCubeTOOPostSchema(OptionalPositionSchema):
     """
     Schema to submit a TOO request for BurstCube.
 
     Parameters
     ----------
-    username : str
-        The username associated with the request.
+    sub : str
+        The authentication sub associated with the request.
     trigger_mission : str
         The mission associated with the trigger.
     trigger_instrument : str
@@ -243,7 +230,7 @@ class BurstCubeFOVCheckSchema(BaseSchema):
     entries: List[PointSchema]
 
 
-class BurstCubeTOOGetSchema(UserSchema):
+class BurstCubeTOOGetSchema(BaseSchema):
     """
     Schema for BurstCubeTOO GET request.
 
@@ -256,7 +243,7 @@ class BurstCubeTOOGetSchema(UserSchema):
     id: str
 
 
-class BurstCubeTOOPutSchema(UserSchema):
+class BurstCubeTOOPutSchema(BaseSchema):
     """
     Schema for BurstCubeTOO GET request.
 
@@ -269,9 +256,7 @@ class BurstCubeTOOPutSchema(UserSchema):
     id: str
 
 
-class BurstCubeTOORequestsGetSchema(
-    UserSchema, OptionalPositionSchema, OptionalDateRangeSchema
-):
+class BurstCubeTOORequestsGetSchema(OptionalPositionSchema, OptionalDateRangeSchema):
     """
     Schema for GET requests to retrieve BurstCube Target of Opportunity (TOO) requests.
 

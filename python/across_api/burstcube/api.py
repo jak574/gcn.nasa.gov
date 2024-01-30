@@ -10,9 +10,12 @@ from astropy.io import fits  # type: ignore
 from astropy.time import Time  # type: ignore
 from fastapi import Depends, File, Query, status
 
+from ..auth.api import JWTBearerDep
+
 from ..base.api import (
     ClassificationDep,
     DateRangeDep,
+    DurationDep,
     EarthOccultDep,
     EpochDep,
     ErrorRadiusDep,
@@ -20,7 +23,6 @@ from ..base.api import (
     IdDep,
     JustificationDep,
     LimitDep,
-    LoginDep,
     OffsetDep,
     OptionalDateRangeDep,
     OptionalRaDecDep,
@@ -32,8 +34,8 @@ from ..base.api import (
     TriggerTimeDep,
     app,
 )
-from ..base.schema import EphemSchema, SAASchema, TLESchema, VisibilitySchema
-from .ephem import BurstCubeEphem
+from ..base.schema import SAASchema, TLESchema
+
 from .fov import BurstCubeFOVCheck
 from .requests import BurstCubeTOORequests
 from .saa import BurstCubeSAA
@@ -44,7 +46,6 @@ from .schema import (
 )
 from .tle import BurstCubeTLE
 from .toorequest import BurstCubeTOO
-from .visibility import BurstCubeVisibility
 
 
 # BurstCube Deps
@@ -57,24 +58,12 @@ async def optional_trigger_time(
         ),
     ] = None,
 ) -> Optional[datetime]:
+    if trigger_time is None:
+        return None
     return Time(trigger_time)
 
 
 OptionalTriggerTimeDep = Annotated[datetime, Depends(optional_trigger_time)]
-
-
-# BurstCube endpoints
-@app.get("/burstcube/ephem")
-async def burstcube_ephemeris(
-    daterange: DateRangeDep,
-    stepsize: StepSizeDep,
-) -> EphemSchema:
-    """
-    Calculates the ephemeris for BurstCube.
-    """
-    return BurstCubeEphem(
-        begin=daterange["begin"], end=daterange["end"], stepsize=stepsize
-    ).schema
 
 
 @app.get("/burstcube/fovcheck")
@@ -111,15 +100,17 @@ async def burstcube_saa(
     return BurstCubeSAA(stepsize=stepsize, **daterange).schema
 
 
-@app.post("/burstcube/too", status_code=status.HTTP_201_CREATED)
+@app.post(
+    "/burstcube/too", status_code=status.HTTP_201_CREATED, dependencies=JWTBearerDep
+)
 async def burstcube_too_submit(
-    user: LoginDep,
     ra_dec: OptionalRaDecDep,
-    error: ErrorRadiusDep,
+    error_radius: ErrorRadiusDep,
     trigger_time: TriggerTimeDep,
     trigger_mission: TriggerMissionDep,
     trigger_instrument: TriggerInstrumentDep,
     trigger_id: TriggerIdDep,
+    trigger_duration: DurationDep,
     classification: ClassificationDep,
     justification: JustificationDep,
     date_range: OptionalDateRangeDep,
@@ -134,15 +125,14 @@ async def burstcube_too_submit(
     """
     # Construct the TOO object.
     too = BurstCubeTOO(
-        username=user["username"],
-        api_key=user["api_key"],
         ra=ra_dec["ra"],
         dec=ra_dec["dec"],
-        error_radius=error,
+        error_radius=error_radius,
         trigger_time=trigger_time,
         trigger_mission=trigger_mission,
         trigger_instrument=trigger_instrument,
         trigger_id=trigger_id,
+        trigger_duration=trigger_duration,
         classification=classification,
         justification=justification,
         begin=date_range["begin"],
@@ -160,65 +150,62 @@ async def burstcube_too_submit(
     return too.schema
 
 
-@app.put("/burstcube/too/{id}", status_code=status.HTTP_201_CREATED)
+@app.put(
+    "/burstcube/too/{id}",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=JWTBearerDep,
+)
 async def burstcube_too_update(
-    user: LoginDep,
     id: IdDep,
     data: BurstCubeTOOSchema,
 ) -> BurstCubeTOOSchema:
     """
     Update a BurstCube TOO object with the given ID number.
     """
-    too = BurstCubeTOO(api_key=user["api_key"], **data.model_dump())
+    too = BurstCubeTOO(**data.model_dump())
     too.put()
     return too.schema
 
 
-@app.get("/burstcube/too/{id}", status_code=status.HTTP_200_OK)
+@app.get(
+    "/burstcube/too/{id}", status_code=status.HTTP_200_OK, dependencies=JWTBearerDep
+)
 async def burstcube_too(
-    user: LoginDep,
     id: IdDep,
 ) -> BurstCubeTOOSchema:
     """
     Retrieve a BurstCube Target of Opportunity (TOO) by ID.
     """
-    too = BurstCubeTOO(username=user["username"], api_key=user["api_key"], id=id)
+    too = BurstCubeTOO(id=id)
     too.get()
     return too.schema
 
 
-@app.delete("/burstcube/too/{id}", status_code=status.HTTP_200_OK)
+@app.delete(
+    "/burstcube/too/{id}", status_code=status.HTTP_200_OK, dependencies=JWTBearerDep
+)
 async def burstcube_delete_too(
-    user: LoginDep,
     id: IdDep,
 ) -> BurstCubeTOOSchema:
     """
     Delete a BurstCube Target of Opportunity (TOO) with the given ID.
     """
-    too = BurstCubeTOO(username=user["username"], api_key=user["api_key"], id=id)
+    too = BurstCubeTOO(id=id)
     too.delete()
     return too.schema
 
 
 @app.get("/burstcube/toorequests")
 async def burstcube_too_requests(
-    user: LoginDep,
     daterange: OptionalDateRangeDep,
-    ra_dec: OptionalRaDecDep,
-    trigger_time: OptionalTriggerTimeDep,
     limit: LimitDep = None,
 ) -> BurstCubeTOORequestsSchema:
     """
     Endpoint to retrieve BurstCube TOO requests.
     """
     return BurstCubeTOORequests(
-        username=user["username"],
-        api_key=user["api_key"],
         begin=daterange["begin"],
         end=daterange["end"],
-        ra=ra_dec["ra"],
-        dec=ra_dec["dec"],
-        trigger_time=trigger_time,
         limit=limit,
     ).schema
 
@@ -231,19 +218,3 @@ async def burstcube_tle(
     Returns the best TLE for BurstCube for a given epoch.
     """
     return BurstCubeTLE(epoch=epoch).schema
-
-
-@app.get("/burstcube/visibility")
-async def burstcube_visibility(
-    daterange: DateRangeDep,
-    ra_dec: RaDecDep,
-) -> VisibilitySchema:
-    """
-    Returns the visibility of an astronomical object to BurstCube for a given date range and RA/Dec coordinates.
-    """
-    return BurstCubeVisibility(
-        begin=daterange["begin"],
-        end=daterange["end"],
-        ra=ra_dec["ra"],
-        dec=ra_dec["dec"],
-    ).schema

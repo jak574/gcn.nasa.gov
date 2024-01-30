@@ -12,7 +12,7 @@ from boto3.dynamodb.conditions import Key  # type: ignore
 from fastapi import HTTPException
 
 from ..across.user import check_api_key
-from ..base.common import ACROSSAPIBase, round_time
+from ..base.common import ACROSSAPIBase
 from ..base.config import set_observatory
 from ..base.schema import PointSchema
 from ..burstcube.fov import BurstCubeFOVCheck
@@ -37,8 +37,8 @@ class BurstCubeTOO(ACROSSAPIBase):
 
     Parameters
     ----------
-    username
-        Username of user making request
+    sub
+        Sub of user making request
     api_key
         API key of user making request
     id
@@ -52,7 +52,7 @@ class BurstCubeTOO(ACROSSAPIBase):
     _post_schema = BurstCubeTOOPostSchema
 
     id: Optional[str]
-    username: str
+    sub: str
     timestamp: Optional[Time]
     ra: Optional[float]
     dec: Optional[float]
@@ -64,8 +64,7 @@ class BurstCubeTOO(ACROSSAPIBase):
     trigger_duration: Optional[float]
     classification: Optional[str]
     justification: Optional[str]
-    begin: Optional[Time]
-    end: Optional[Time]
+    begin: u.Quantity
     exposure: u.Quantity
     offset: float
     reason: TOOReason
@@ -76,10 +75,8 @@ class BurstCubeTOO(ACROSSAPIBase):
     too_info: str
     warnings: list
 
-    def __init__(self, username: str, api_key: str, id: Optional[str] = None, **kwargs):
+    def __init__(self, id: Optional[str] = None, **kwargs):
         # Set Optional Parameters to None
-        self.begin = None
-        self.end = None
         self.ra = None
         self.dec = None
         self.healpix_loc = None
@@ -92,11 +89,9 @@ class BurstCubeTOO(ACROSSAPIBase):
         # Parameter defaults
         self.exposure = 200 * u.s  # default exposure time (e.g. length of dump)
         # default offset. Moves the triggertime 50s before the middle of the dump window.
-        self.offset = -50 * u.s
+        self.begin = -50 * u.s
 
         # Parse Arguments
-        self.username = username
-        self.api_key = api_key
         self.id = id
         # Connect to the DynamoDB table
         self.table = tables.table("burstcube_too")
@@ -131,7 +126,7 @@ class BurstCubeTOO(ACROSSAPIBase):
     @check_api_key(anon=False)
     def delete(self) -> bool:
         """
-        Delete a given too, specified by id. username of BurstCubeTOO has to match yours.
+        Delete a given too, specified by id. sub of BurstCubeTOO has to match yours.
 
         Returns
         -------
@@ -139,9 +134,9 @@ class BurstCubeTOO(ACROSSAPIBase):
             Did this work? True | False
         """
         if self.validate_del():
-            username = self.username
+            sub = self.sub
             if self.get():
-                if self.username != username:
+                if self.sub != sub:
                     raise HTTPException(401, "BurstCubeTOO not owned by user.")
 
                 response = self.table.delete_item(Key={"id": self.id})
@@ -237,15 +232,15 @@ class BurstCubeTOO(ACROSSAPIBase):
             return self.post()
 
         # If id is given, assume we're modifying an existing BurstCubeTOO.
-        # Check if this BurstCubeTOO exists and is of the same username
+        # Check if this BurstCubeTOO exists and is of the same sub
         response = self.table.get_item(Key={"id": self.id})
 
         # Check if the TOO exists
         if "Item" not in response:
             raise HTTPException(404, "BurstCubeTOO not found.")
 
-        # Check if the username matches
-        if response["Item"]["username"] != self.username:
+        # Check if the sub matches
+        if response["Item"]["sub"] != self.sub:
             raise HTTPException(401, "BurstCubeTOO not owned by user.")
 
         # Write BurstCubeTOO to the database
@@ -345,15 +340,6 @@ class BurstCubeTOO(ACROSSAPIBase):
         # Validate supplied BurstCubeTOO values against the Schema
         if not self.validate_post():
             return False
-
-        # Set the start and end time of the BurstCube event dump
-        if self.begin is None or self.end is None:
-            # If self.offset = 0, triggertime will be at the center of the dump window
-            # FIXME - why is it necessary to convert offset into a int from a string?
-            self.begin = (
-                round_time(self.trigger_time, 1 * u.s) - self.exposure + self.offset
-            )
-            self.end = self.begin + self.exposure
 
         # Check if this matches a previous BurstCubeTOO
         if self.check_for_previous_toos():
