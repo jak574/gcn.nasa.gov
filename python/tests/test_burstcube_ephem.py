@@ -1,4 +1,6 @@
-# Perform an BurstCubeEphem API call
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
 
 
 import numpy as np
@@ -6,7 +8,7 @@ from astropy.time import Time  # type: ignore
 import astropy.units as u  # type: ignore
 from across_api.burstcube.ephem import BurstCubeEphem  # type: ignore
 from across_api.burstcube.tle import BurstCubeTLE  # type: ignore
-from across_api.base.schema import TLEEntry
+from across_api.base.schema import TLEEntry  # type: ignore
 
 # Define a TLE by hand
 satname = "ISS (ZARYA)"

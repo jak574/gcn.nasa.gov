@@ -1,4 +1,8 @@
-from across_api.across.resolve import Resolve
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
+from across_api.across.resolve import Resolve  # type: ignore
 
 
 def test_resolve_cds():

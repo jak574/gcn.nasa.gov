@@ -1,4 +1,6 @@
-# Perform an SwiftEphem API call
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
 
 
 import numpy as np
@@ -6,7 +8,7 @@ from astropy.time import Time  # type: ignore
 import astropy.units as u  # type: ignore
 from across_api.swift.ephem import SwiftEphem  # type: ignore
 from across_api.swift.tle import SwiftTLE  # type: ignore
-from across_api.base.schema import TLEEntry
+from across_api.base.schema import TLEEntry  # type: ignore
 
 # Define a TLE by hand
 satname = "SWIFT"
