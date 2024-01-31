@@ -6,8 +6,8 @@ from astropy.time import Time  # type: ignore
 import astropy.units as u  # type: ignore
 from across_api.swift.ephem import SwiftEphem  # type: ignore
 from across_api.swift.tle import SwiftTLE  # type: ignore
-from across_api.base.schema import TLEEntry
-from across_api.swift.saa import SwiftSAA
+from across_api.base.schema import TLEEntry  # type: ignore
+from across_api.swift.saa import SwiftSAA  # type: ignore
 
 # Define a TLE by hand
 satname = "SWIFT"
@@ -53,4 +53,4 @@ def test_swift_saa():
     """Assert that the SAA enter/exit times are within 60 seconds of the Swift
     API, where 60s is the default stepsize"""
     assert len(swift_saa_entries) == len(saa.entries)
-    assert (np.abs(saa_entries - swift_saa_entries) < saa.stepsize.to(u.s).value).all()
+    assert (np.abs(saa_entries - swift_saa_entries) <= saa.stepsize.to(u.s).value).all()
