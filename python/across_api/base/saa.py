@@ -3,7 +3,7 @@
 # All Rights Reserved.
 
 
-from typing import List, Optional, Type
+from typing import List, Optional, Type, Union
 
 import astropy.units as u  # type: ignore
 import numpy as np
@@ -91,7 +91,7 @@ class SAABase(ACROSSAPIBase):
         if self.validate_get():
             self.get()
 
-    def get(self) -> bool:
+    def get(self) -> Union[bool, np.ndarray]:
         """
         Calculate list of SAA entries for a given date range.
 
@@ -105,13 +105,13 @@ class SAABase(ACROSSAPIBase):
 
         # Calculate SAA windows
         self.entries = self.saa_windows(
-            self.insaacons(times=self.timestamp, ephem=self.ephem),
+            self.insaacons(time=self.timestamp, ephem=self.ephem),  # type: ignore
         )
 
         return True
 
     @classmethod
-    def insaa(cls, t: Time) -> bool:
+    def insaa(cls, t: Time) -> Union[bool, np.ndarray]:
         """
         For a given time, are we in the SAA?
 
@@ -126,9 +126,9 @@ class SAABase(ACROSSAPIBase):
         """
         # Calculate an ephemeris for the exact time requested
         ephem = cls.ephemclass(begin=t, end=t, stepsize=1e-6 * u.s)  # type: ignore
-        return cls.insaacons(times=t, ephem=ephem)[0]
+        return cls.insaacons(time=t, ephem=ephem)
 
-    def saa_windows(self, insaa: list) -> list:
+    def saa_windows(self, insaa: np.ndarray) -> list:
         """
         Record SAAEntry from array of booleans and timestamps
 
@@ -145,7 +145,7 @@ class SAABase(ACROSSAPIBase):
             List of SAAEntry objects
         """
         # Find the start and end of the SAA windows
-        buff = np.concatenate(([False], insaa, [False]))
+        buff = np.concatenate(([False], insaa.tolist(), [False]))
         begin = np.flatnonzero(~buff[:-1] & buff[1:])
         end = np.flatnonzero(buff[:-1] & ~buff[1:])
         indices = np.column_stack((begin, end - 1))
