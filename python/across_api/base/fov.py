@@ -6,6 +6,7 @@ from typing import Optional, Union
 
 import astropy_healpix as ah  # type: ignore
 import astropy.units as u  # type: ignore
+from astropy.io.fits import FITS_rec  # type: ignore
 import numpy as np
 from astropy.coordinates import SkyCoord, angular_separation  # type: ignore
 from astropy.time import Time  # type: ignore
@@ -118,10 +119,10 @@ class FOVBase(ACROSSAPIBase):
         ephem: EphemBase,
     ) -> Union[bool, np.ndarray]:
         """
-        Is the target at a given coordinate, inside the
-        given coordinates inside the FOV and not Earth occulted. Note
-        that this method only checks for Earth occultation, so defines
-        a simple 'all-sky' FOV with no other constraints.
+        Is the target at a given coordinate, inside the given coordinates
+        inside the FOV and not Earth occulted. Note that this method only
+        checks for Earth occultation, so defines a simple 'all-sky' FOV with no
+        other constraints.
 
         Parameters
         ----------
@@ -210,7 +211,7 @@ class FOVBase(ACROSSAPIBase):
 
     def infov_hp(
         self,
-        healpix_loc: np.ndarray,
+        healpix_loc: FITS_rec,
         time: Time,
         ephem: EphemBase,
         healpix_nside: Optional[int] = None,
@@ -225,7 +226,7 @@ class FOVBase(ACROSSAPIBase):
         to deal with pixels that are only partially inside the FOV.
 
         If `healpix_order` == "NUNIQ", it assumes that `healpix_loc` contains
-        UNIQ values and converts them to `level` and `ipix` values.
+        a multi-order HEALPix map.
 
         Parameters
         ----------
@@ -250,15 +251,14 @@ class FOVBase(ACROSSAPIBase):
             The amount of probability inside the FOV.
 
         """
-        # Check if this is a MOC map
+        # Extract the NSIDE value from the HEALPix map, also level and ipix if
+        # this is a MOC map
         if healpix_order == "NUNIQ":
             level, ipix = ah.uniq_to_level_ipix(healpix_loc["UNIQ"])
-            healpix_nside = ah.level_to_nside(level)
+            uniq_nside = ah.level_to_nside(level)
             healpix_loc = healpix_loc["PROBDENSITY"]
-
-        # Calculate the HEALPix NSIDE value
-        if healpix_nside is None:
-            healpix_nside = ah.npix_to_nside(len(healpix_loc))
+        else:
+            nside = ah.npix_to_nside(len(healpix_loc))
 
         # Find where in HEALPix map the probability is > 0
         nonzero_prob_pixels = np.where(healpix_loc > 0.0)[0]
@@ -267,18 +267,18 @@ class FOVBase(ACROSSAPIBase):
         if healpix_order == "NUNIQ":
             ra, dec = ah.healpix_to_lonlat(
                 ipix[nonzero_prob_pixels],
-                nside=healpix_nside[nonzero_prob_pixels],  # type: ignore
+                nside=uniq_nside[nonzero_prob_pixels],  # type: ignore
                 order="NESTED",
             )
         else:
             ra, dec = ah.healpix_to_lonlat(
-                nonzero_prob_pixels, nside=healpix_nside, order=healpix_order
+                nonzero_prob_pixels, nside=nside, order=healpix_order
             )
 
         # Convert these coordinates into a SkyCoord
         skycoord = SkyCoord(ra=ra, dec=dec, unit="deg")
 
-        # Calculate pixel values of the all the regions inside of the FOV
+        # Calculate pixel indicies of the all the regions inside of the FOV
         visible_pixels = nonzero_prob_pixels[
             self.infov(skycoord=skycoord, time=time, ephem=ephem)
         ]
@@ -287,7 +287,7 @@ class FOVBase(ACROSSAPIBase):
         if healpix_order == "NUNIQ":
             # Calculate probability in FOV by multiplying the probability density by
             # area of each pixel and summing up
-            pixarea = ah.nside_to_pixel_area(healpix_nside[visible_pixels])  # type: ignore
+            pixarea = ah.nside_to_pixel_area(uniq_nside[visible_pixels])
             return float(round(np.sum(healpix_loc[visible_pixels] * pixarea.value), 5))
         else:
             # Calculate the amount of probability inside the FOV
