@@ -9,7 +9,6 @@ import numpy as np
 from astropy.coordinates import Angle, SkyCoord  # type: ignore[import]
 from astropy.time import Time  # type: ignore[import]
 from shapely import Polygon, points  # type: ignore[import]
-
 from .ephem import EphemBase
 
 
