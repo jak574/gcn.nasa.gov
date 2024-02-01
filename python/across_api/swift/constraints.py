@@ -2,13 +2,9 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-<<<<<<< HEAD
 import astropy.units as u  # type: ignore
 
 from ..base.constraints import EarthLimbConstraint, SAAPolygonConstraint
-=======
-from ..base.constraints import SAAPolygonConstraint
->>>>>>> be380ff (Update SAA constraint classes)
 
 """Define constraints for the BurstCube Mission."""
 
@@ -31,8 +27,5 @@ swift_saa_constraint = SAAPolygonConstraint(
         (-83.0, -30.0),
     ]
 )
-<<<<<<< HEAD
 
 swift_earth_constraint = EarthLimbConstraint(min_angle=33 * u.deg)
-=======
->>>>>>> be380ff (Update SAA constraint classes)

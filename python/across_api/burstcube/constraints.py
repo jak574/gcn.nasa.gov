@@ -2,16 +2,8 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 from ..base.constraints import EarthLimbConstraint, SAAPolygonConstraint
 import astropy.units as u  # type: ignore
-=======
-from ..base.constraints import SAAPolygonConstraint
->>>>>>> be380ff (Update SAA constraint classes)
-=======
-from ..base.constraints import EarthLimbConstraint, SAAPolygonConstraint
->>>>>>> 7f7bf47 (Add EarthLimbConstraint for BurstCube)
 
 """Define constraints for the BurstCube Mission."""
 
@@ -38,16 +30,6 @@ burstcube_saa_constraint = SAAPolygonConstraint(
         (33.900000, -30.0),
     ]
 )
-<<<<<<< HEAD
-<<<<<<< HEAD
-
 
 # EarthLimbConstraint
 burstcube_earth_constraint = EarthLimbConstraint(min_angle=0 * u.deg)
-=======
->>>>>>> be380ff (Update SAA constraint classes)
-=======
-
-# EarthLimbConstraint
-burstcube_earth_constraint = EarthLimbConstraint(earthoccult=0)
->>>>>>> 7f7bf47 (Add EarthLimbConstraint for BurstCube)
