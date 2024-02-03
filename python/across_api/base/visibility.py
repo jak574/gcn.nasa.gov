@@ -2,32 +2,59 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from datetime import datetime
+from functools import cached_property
 from typing import List, Optional
 
 import astropy.units as u  # type: ignore
 import numpy as np
-from astropy.coordinates import FK5, CartesianRepresentation, SkyCoord  # type: ignore
+from .constraints import (
+    EarthLimbConstraint,
+    MoonConstraint,
+    PoleConstraint,
+    RamConstraint,
+    SAAPolygonConstraint,
+    SunConstraint,
+)
+from astropy.coordinates import SkyCoord  # type: ignore
 from astropy.time import Time  # type: ignore
-from shapely import Polygon  # type: ignore
 
-from .constraints import SAAPolygonConstraint  # type: ignore
 
-from ..functions import round_time
 from .common import ACROSSAPIBase
 from .ephem import EphemBase
-from .saa import SAABase
-from .schema import VisibilityGetSchema, VisibilitySchema
-from .window import MakeWindowBase
+from .schema import VisibilityGetSchema, VisibilitySchema, VisWindow
 
 
-class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
-    """Calculate visibility of a given object."""
+class VisibilityBase(ACROSSAPIBase):
+    """
+    Calculate visibility of a given object.
+
+
+    Parameters
+    ----------
+    ra
+        Right Ascension in decimal degrees
+    dec
+        Declination in decimal degrees
+    begin
+        Start time of visibility search
+    end
+        End time of visibility search
+    stepsize
+        Step size in seconds for visibility calculations
+
+    Attributes
+    ----------
+    ephem
+        Ephem object to use for visibility calculations
+    saa
+        SAA object to use for visibility calculations
+    entries
+        List of visibility windows
+    """
 
     _schema = VisibilitySchema
     _get_schema = VisibilityGetSchema
 
-    # Constraint definitions
     ram_cons: bool
     pole_cons: bool
     sun_cons: bool
@@ -43,17 +70,63 @@ class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
     earthextra: float
     moonextra: float
     isat: bool
-    entries: list
+    saapoly: Optional[list]
+
+    # Constraint definitions
+    ram_constraint: Optional[RamConstraint] = None
+    pole_constraint: Optional[PoleConstraint] = None
+    sun_constraint: Optional[SunConstraint] = None
+    moon_constraint: Optional[MoonConstraint] = None
+    earth_constraint: Optional[EarthLimbConstraint] = None
+    saa_constraint: Optional[SAAPolygonConstraint] = None
+
+    inramcon: np.ndarray
+    inpolecon: np.ndarray
+    insuncon: np.ndarray
+    inmooncon: np.ndarray
+    inearthcon: np.ndarray
+    insaacon: np.ndarray
+    inconstraint: np.ndarray
+
+    entries: List[VisWindow]
     ra: float
     dec: float
-    saapoly: Polygon
 
-    begin: datetime
-    end: datetime
-    velocity: bool
-    saa: SAABase
+    begin: Time
+    end: Time
     ephem: EphemBase
-    stepsize: int
+    stepsize: u.Quantity
+
+    def __init__(self, begin: Time, end: Time, ra: float, dec: float):
+        self.ra = ra
+        self.dec = dec
+        self.begin = begin
+        self.end = end
+        self.entries = list()
+        self.stepsize = 60 * u.s
+
+        # Set up constraints
+        if self.ram_cons:
+            self.ram_constraint = RamConstraint(self.ramsize)
+        if self.pole_cons:
+            self.pole_constraint = PoleConstraint(self.earthoccult + self.earthextra)
+        if self.sun_cons:
+            self.sun_constraint = SunConstraint(self.sunoccult + self.sunextra)
+        if self.moon_cons:
+            self.moon_constraint = MoonConstraint(self.moonoccult + self.moonextra)
+        if self.earth_cons:
+            self.earth_constraint = EarthLimbConstraint(
+                self.earthoccult + self.earthextra
+            )
+        if self.pole_cons:
+            self.pole_constraint = PoleConstraint(self.earthoccult + self.earthextra)
+        if self.saa_cons and self.saapoly is not None:
+            self.saa_constraint = SAAPolygonConstraint(self.saapoly)
+
+        # Parse argument keywords
+        if self.validate_get():
+            # Perform Query
+            self.get()
 
     def __getitem__(self, i):
         return self.entries[i]
@@ -61,107 +134,7 @@ class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
     def __len__(self):
         return len(self.timestamp)
 
-    @property
-    def timestamp(self):
-        return self.ephem.timestamp[self.ephstart : self.ephstop]
-
-    @property
-    def inearthcons(self) -> List[bool]:
-        if not hasattr(self, "_inearthcons"):
-            earthang = self.ephem.earth[self.ephstart : self.ephstop].separation(
-                self.skycoord
-            )
-
-            earth_cons = self.earthoccult * u.deg  # type: ignore
-            if not self.isat:
-                earth_cons += self.earthextra * u.deg  # type: ignore
-
-            self._inearthcons = earthang < earth_cons + self.ephem.earthsize[self.ephstart : self.ephstop] * u.deg  # type: ignore
-
-        return self._inearthcons
-
-    @property
-    def inramcons(self) -> Optional[np.ndarray]:
-        """Calculate Ram constraint (avoidance of direction of motion)"""
-        if self.ephem.velocity is not False and self.ephem.velvec is not None:
-            if not hasattr(self, "_inramcons"):
-                # calculate the angle between the velocity vector and the RA/Dec vector
-                self.ramang = SkyCoord(
-                    CartesianRepresentation(
-                        x=self.ephem.velvec[self.ephstart : self.ephstop].T
-                    )
-                ).separation(self.skycoord)
-
-                # calculate the size of the ram constraint
-                ram_cons = self.ramsize * u.deg  # type: ignore
-                if not self.isat:
-                    ram_cons += self.ramextra * u.deg  # type: ignore
-                # return the constraint
-                self._inramcons = self.ramang < ram_cons
-            return self._inramcons
-        return None
-
-    @property
-    def inpolecons(self) -> Optional[np.ndarray]:
-        """Determine if a source is in pole constraint"""
-        # Calculate the size of the pole constraint
-        if self.ephem.velocity is not False and self.ephem.polevec is not None:
-            if not hasattr(self, "_inpolecons"):
-                pole_cons = (
-                    self.ephem.earthsize[self.ephstart : self.ephstop]
-                    + self.earthoccult
-                    - 90
-                ) * u.deg  # type: ignore
-                if not self.isat:
-                    pole_cons += self.earthextra * u.deg
-
-                # Calculate the angular distance from the North and South poles
-                north_dist = self.ephem.pole[self.ephstart : self.ephstop].separation(
-                    self.skycoord
-                )
-
-                south_dist = SkyCoord(
-                    CartesianRepresentation(
-                        -self.ephem.polevec[self.ephstart : self.ephstop].T
-                    )
-                ).separation(self.skycoord)
-
-                # Create an array of pole constraints
-                self._inpolecons = np.logical_or(
-                    south_dist < pole_cons, north_dist < pole_cons
-                )
-            return self._inpolecons
-        return None
-
-    @property
-    def insuncons(self):
-        """Calculate Sun constraint"""
-        if not hasattr(self, "_insuncons"):
-            sunang = self.ephem.sun[self.ephstart : self.ephstop].separation(
-                self.skycoord
-            )
-
-            sun_cons = self.sunoccult * u.deg  # type: ignore
-            if not self.isat:
-                sun_cons += self.sunextra * u.deg  # type: ignore
-            self._insuncons = sunang < sun_cons
-        return self._insuncons
-
-    @property
-    def inmooncons(self):
-        """Calculate Moon constraint"""
-        if not hasattr(self, "_inmooncons"):
-            moonang = self.ephem.moon[self.ephstart : self.ephstop].separation(
-                self.skycoord
-            )
-
-            moon_cons = self.moonoccult * u.deg  # type: ignore
-            if not self.isat:
-                moon_cons += self.moonextra * u.deg  # type: ignore
-            self._inmooncons = moonang < moon_cons
-        return self._inmooncons
-
-    @property
+    @cached_property
     def skycoord(self):
         """Create array of RA/Dec and vector of these"""
         if hasattr(self, "_skycoord") is False:
@@ -199,19 +172,28 @@ class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
                 return True
         return False
 
-    @property
-    def ephstart(self):
+    @cached_property
+    def ephstart(self) -> Optional[int]:
+        """
+        Returns the ephemeris index of the beginning time.
+        """
         return self.ephem.ephindex(self.begin)
 
-    @property
-    def ephstop(self):
-        return self.ephem.ephindex(self.end) + 1
+    @cached_property
+    def ephstop(self) -> Optional[int]:
+        i = self.ephem.ephindex(self.end)
+        if i is None:
+            return None
+        return i + 1
 
-    def get(self):
-        """Query visibility for a given RA/Dec."""
-        # Round begin to the nearest minute
-        self.begin = round_time(self.begin, 60)
+    def get(self) -> bool:
+        """
+        Query visibility for given parameters.
 
+        Returns
+        -------
+            True if successful, False otherwise.
+        """
         # Reset windows
         self.entries = list()
 
@@ -219,57 +201,146 @@ class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
         if not self.validate_get():
             return False
 
-        # Set up the constraint array
-        self.inconstraint = np.zeros(len(self.timestamp), dtype=bool)
+        # Calculate the times to calculate the visibility
+        self.timestamp = self.ephem.timestamp[self.ephstart : self.ephstop]
 
         # Calculate SAA constraint
-        if self.saa_cons is True:
-            self.inconstraint = self.insaacons
+        if self.saa_constraint is not None:
+            self.insaacon = self.saa_constraint(time=self.timestamp, ephem=self.ephem)  # type: ignore
+        else:
+            self.insaacon = np.full(len(self.timestamp), False)
 
         # Calculate Earth constraint
-        if self.earth_cons is True:
-            self.inconstraint += self.inearthcons
+        if self.earth_constraint is not None:
+            self.inearthcon = self.earth_constraint(
+                coord=self.skycoord, time=self.timestamp, ephem=self.ephem  # type: ignore
+            )
+        else:
+            self.inearthcon = np.full(len(self.timestamp), False)
 
         # Calculate Moon constraint
-        if self.moon_cons is True:
-            self.inconstraint += self.inmooncons
+        if self.moon_constraint is not None:
+            self.inmooncon = self.moon_constraint(
+                coord=self.skycoord, time=self.timestamp, ephem=self.ephem  # type: ignore
+            )
+        else:
+            self.inmooncon = np.full(len(self.timestamp), False)
 
         # Calculate Sun constraint
-        if self.sun_cons is True:
-            self.inconstraint += self.insuncons
+        if self.sun_constraint is not None:
+            self.insuncon = self.sun_constraint(
+                coord=self.skycoord, time=self.timestamp, ephem=self.ephem  # type: ignore
+            )
+        else:
+            self.insuncon = np.full(len(self.timestamp), False)
+
+        # Calculate Pole constraint
+        if self.pole_constraint is not None:
+            self.inpolecon = self.pole_constraint(
+                coord=self.skycoord, time=self.timestamp, ephem=self.ephem  # type: ignore
+            )
+        else:
+            self.inpolecon = np.full(len(self.timestamp), False)
 
         # Calculate Pole constraint
         if self.pole_cons is True and self.inpolecons is not None:
             self.inconstraint += self.inpolecons
 
         # Calculate Ram constraint
-        if self.ram_cons is True and self.inramcons is not None:
-            self.inconstraint += self.inramcons
+        if self.ram_constraint is not None:
+            self.inramcon = self.ram_constraint(
+                coord=self.skycoord,
+                time=self.timestamp,
+                ephem=self.ephem,  #   type: ignore
+            )
+        else:
+            self.inramcon = np.full(len(self.timestamp), False)
+
+        # Calculate combined constraints
+        self.inconstraint = (
+            self.insuncon
+            | self.inmooncon
+            | self.inpolecon
+            | self.inearthcon
+            | self.insaacon
+            | self.inramcon
+        )
 
         # Calculate good windows from combined constraints
         self.entries = self.make_windows(self.inconstraint)
         if len(self.entries) == 0:
             self.status.warning("No visibility for target in given time period.")
 
+        return True
+
     def constraint(self, index: int) -> str:
-        """Tell you what kind of constraints are in place at a given time index"""
+        """
+        What kind of constraints are in place at a given time index.
+
+        Parameters
+        ----------
+        index
+            Index of timestamp to check
+
+        Returns
+        -------
+            String indicating what constraint is in place at given time index
+        """
+        # Sanity check
+        assert self.ephstart is not None
+        assert self.ephstop is not None
+
         # Check if index is out of bounds
         if self.timestamp[index] <= self.begin or self.timestamp[index] >= self.end:
             return "Window"
         # Return what constraint is causing the window to open/close
         if self.inconstraint[index]:
-            if self.insuncons[index]:
+            if self.sun_constraint is not None and self.insuncon[index]:
                 return "Sun"
-            elif self.inmooncons[index]:
+            elif self.moon_constraint is not None and self.inmooncon[index]:
                 return "Moon"
-            elif self.inearthcons[index]:
+            elif self.pole_constraint is not None and self.inpolecon[index]:
+                return "Pole"
+            elif self.earth_constraint is not None and self.inearthcon[index]:
                 return "Earth"
+            elif self.saa_constraint is not None and self.insaacon[index]:
+                return "SAA"
             else:
                 return "Unknown"
         else:
             return "None"
 
-    @property
-    def insaacons(self) -> list:
-        """Calculate SAA constraint using SAA Polygon"""
-        return self.saa.insaacons[self.ephstart : self.ephstop]
+    def make_windows(self, inconstraint: np.ndarray) -> list:
+        """
+        Record SAAEntry from array of booleans and timestamps
+
+        Parameters
+        ----------
+        inconstraint : list
+            List of booleans indicating if the spacecraft is in the SAA
+        wintype : VisWindow
+            Type of window to create (default: VisWindow)
+
+        Returns
+        -------
+        list
+            List of SAAEntry objects
+        """
+        # Find the start and end of the SAA windows
+        buff: np.ndarray = np.concatenate(
+            ([False], np.logical_not(inconstraint), [False])
+        )
+        begin = np.flatnonzero(~buff[:-1] & buff[1:])
+        end = np.flatnonzero(buff[:-1] & ~buff[1:])
+        indices = np.column_stack((begin, end - 1))
+
+        # Return as list of VisWindows
+        return [
+            VisWindow(
+                begin=self.ephem.timestamp[i[0]],
+                end=self.ephem.timestamp[i[1]],
+                initial=self.constraint(i[0] - 1),
+                final=self.constraint(i[1] + 1),
+            )
+            for i in indices
+        ]

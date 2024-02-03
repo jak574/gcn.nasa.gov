@@ -2,56 +2,20 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from functools import cached_property
-from typing import List, Optional
+
+from typing import List, Optional, Type, Union
 
 import astropy.units as u  # type: ignore
 from astropy.time import Time  # type: ignore
-from shapely import Point, Polygon  # type: ignore
 
-from .common import ACROSSAPIBase
+from .common import ACROSSAPIBase, ceil_time, floor_time, round_time
+from .constraints import SAAPolygonConstraint
 from .ephem import EphemBase
 from .schema import SAAEntry, SAAGetSchema, SAASchema
-from .window import MakeWindowBase
+import numpy as np
 
 
-class SAAPolygonBase:
-    """
-    Class to define the Mission SAA Polygon.
-
-    Attributes
-    ----------
-    points
-        List of points defining the SAA polygon.
-    saapoly
-        Shapely Polygon object defining the SAA polygon.
-
-    """
-
-    points: list = [
-        (39.0, -30.0),
-        (36.0, -26.0),
-        (28.0, -21.0),
-        (6.0, -12.0),
-        (-5.0, -6.0),
-        (-21.0, 2.0),
-        (-30.0, 3.0),
-        (-45.0, 2.0),
-        (-60.0, -2.0),
-        (-75.0, -7.0),
-        (-83.0, -10.0),
-        (-87.0, -16.0),
-        (-86.0, -23.0),
-        (-83.0, -30.0),
-    ]
-
-    saapoly: Polygon = Polygon(points)
-
-    def insaa(self, lat: float, lon: float) -> bool:
-        return self.saapoly.contains(Point(lat, lon))
-
-
-class SAABase(ACROSSAPIBase, MakeWindowBase):
+class SAABase(ACROSSAPIBase):
     """
     Class for SAA calculations.
 
@@ -77,6 +41,8 @@ class SAABase(ACROSSAPIBase, MakeWindowBase):
         List of SAA entries
     status
         Status of SAA query
+    insaacons
+        SAA constraint class to use for SAA calculations
     """
 
     _schema = SAASchema
@@ -85,11 +51,12 @@ class SAABase(ACROSSAPIBase, MakeWindowBase):
     begin: Time
     end: Time
 
-    # Internal things
-    saa: SAAPolygonBase
+    # Constraint class to use for SAA calculations
+    insaacons: SAAPolygonConstraint
 
     stepsize: u.Quantity
     entries: List[SAAEntry]  # type: ignore
+    ephemclass: Type[EphemBase]
 
     def __init__(
         self,
@@ -101,20 +68,29 @@ class SAABase(ACROSSAPIBase, MakeWindowBase):
         """
         Initialize the SAA class.
         """
-        # Parse parameters
-        self.begin = begin
-        self.end = end
+        # Round start and end times to stepsize resolution
+        self.begin = round_time(begin, stepsize)
+        self.end = round_time(end, stepsize)
         self.stepsize = stepsize
-        if ephem is not None:
-            self.ephem = ephem
+
+        # Instantiate the ephem class here if not passed as an argument. By
+        # default we'll calculate ephem for a whole day, to aide with caching.
+        if ephem is None:
+            ephem = self.ephemclass(
+                begin=floor_time(self.begin, 1 * u.day),
+                end=ceil_time(self.end, 1 * u.day),
+                stepsize=self.stepsize,
+            )
+        else:
             # Make sure stepsize matches supplied ephemeris
             self.stepsize = ephem.stepsize
+        self.ephem = ephem
 
         # If request validates, do a get
         if self.validate_get():
             self.get()
 
-    def get(self) -> bool:
+    def get(self) -> Union[bool, np.ndarray]:
         """
         Calculate list of SAA entries for a given date range.
 
@@ -122,47 +98,19 @@ class SAABase(ACROSSAPIBase, MakeWindowBase):
         -------
             Did the query succeed?
         """
+        # Determine the times to calculate the SAA
+        steps = int((self.end - self.begin).to(u.s) / (self.stepsize.to(u.s)) + 1)
+        self.timestamp = Time(np.linspace(self.begin, self.end, steps))
+
         # Calculate SAA windows
-        self.entries = self.make_windows(
-            [not s for s in self.insaacons], wintype=SAAEntry
+        self.entries = self.saa_windows(
+            self.insaacons(time=self.timestamp, ephem=self.ephem),  # type: ignore
         )
 
         return True
 
-    def insaawindow(self, t):
-        """
-        Check if the given Time falls within any of the SAA windows in list.
-
-        Arguments
-        ---------
-        t
-            The Time to check.
-
-        Returns
-        -------
-            True if the Time falls within any SAA window, False otherwise.
-        """
-        return True in [True for win in self.entries if t >= win.begin and t <= win.end]
-
-    @cached_property
-    def insaacons(self) -> list:
-        """
-        Calculate SAA constraint for each point in the ephemeris using SAA
-        Polygon.
-
-        Returns
-        -------
-        list
-            List of booleans indicating if the spacecraft is in the SAA
-
-        """
-        return [
-            self.saa.insaa(self.ephem.longitude[i].deg, self.ephem.latitude[i].deg)
-            for i in range(len(self.ephem))
-        ]
-
     @classmethod
-    def insaa(cls, t: Time) -> bool:
+    def insaa(cls, t: Time) -> Union[bool, np.ndarray]:
         """
         For a given time, are we in the SAA?
 
@@ -177,4 +125,30 @@ class SAABase(ACROSSAPIBase, MakeWindowBase):
         """
         # Calculate an ephemeris for the exact time requested
         ephem = cls.ephemclass(begin=t, end=t, stepsize=1e-6 * u.s)  # type: ignore
-        return cls.saa.insaa(ephem.longitude[0].deg, ephem.latitude[0].deg)
+        return cls.insaacons(time=t, ephem=ephem)
+
+    def saa_windows(self, insaa: np.ndarray) -> list:
+        """
+        Record SAAEntry from array of booleans and timestamps
+
+        Parameters
+        ----------
+        inconstraint : list
+            List of booleans indicating if the spacecraft is in the SAA
+        wintype : VisWindow
+            Type of window to create (default: VisWindow)
+
+        Returns
+        -------
+        list
+            List of SAAEntry objects
+        """
+        # Find the start and end of the SAA windows
+        buff = np.concatenate(([False], insaa.tolist(), [False]))
+        begin = np.flatnonzero(~buff[:-1] & buff[1:])
+        end = np.flatnonzero(buff[:-1] & ~buff[1:])
+        indices = np.column_stack((begin, end - 1))
+        windows = self.timestamp[indices]
+
+        # Return as array of SAAEntry objects
+        return [SAAEntry(begin=win[0], end=win[1]) for win in windows]
