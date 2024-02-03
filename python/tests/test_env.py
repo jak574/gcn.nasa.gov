@@ -3,7 +3,7 @@
 # All Rights Reserved.
 
 
-from env import feature, get_features
+from env import feature, get_features  # type: ignore
 
 
 def test_features_undefined(monkeypatch):
