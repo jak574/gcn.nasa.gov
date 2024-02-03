@@ -78,7 +78,7 @@ def healpix_map_from_position_error(
     prob = normal_pdf(distance, error_radius).value
 
     # Normalize it
-    prob /= sum(prob)
+    prob = np.divide(prob, np.sum(prob))
 
     return prob
 
