@@ -23,9 +23,6 @@ from sgp4.api import Satrec  # type: ignore
 from ..base.schema import TLEEntry
 from .common import round_time
 
-# Constants
-EARTH_RADIUS = 6371 * u.km  # km. Note this is average radius, as Earth is not a sphere.
-
 
 class EphemBase:
     """
