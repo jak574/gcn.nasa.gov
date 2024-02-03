@@ -2,13 +2,14 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
+from datetime import timedelta
 from typing import Optional
 
 import astropy.units as u  # type: ignore
 import numpy as np
-from astroplan import Observer  # type: ignore
 from astropy.constants import R_earth  # type: ignore
 from astropy.coordinates import (  # type: ignore
+    GCRS,
     TEME,
     CartesianDifferential,
     CartesianRepresentation,
@@ -19,11 +20,11 @@ from astropy.time import Time  # type: ignore
 from fastapi import HTTPException
 from sgp4.api import Satrec  # type: ignore
 
-from ..base.schema import EphemGetSchema, EphemSchema, TLEEntry
-from .common import ACROSSAPIBase, round_time
+from ..base.schema import TLEEntry
+from .common import round_time
 
 
-class EphemBase(ACROSSAPIBase):
+class EphemBase:
     """
     Base class for computing ephemeris data, for spacecraft whose positions can
     be determined using a Two-Line Element (TLE), i.e. most Earth-orbiting
@@ -58,12 +59,7 @@ class EphemBase(ACROSSAPIBase):
     -------
     ephindex
         Returns the array index for a given time.
-    get
-        Computes the ephemeris for the specified time range.
     """
-
-    _schema = EphemSchema
-    _get_schema = EphemGetSchema
 
     # Type hints
     begin: Time
@@ -71,23 +67,6 @@ class EphemBase(ACROSSAPIBase):
     stepsize: u.Quantity
     earth_radius: Optional[u.Quantity] = None
     tle: Optional[TLEEntry] = None
-
-    def __init__(self, begin: Time, end: Time, stepsize: u.Quantity = 60 * u.s):
-        # Check if TLE is loaded
-        if self.tle is None:
-            raise HTTPException(
-                status_code=404, detail="No TLE available for this epoch"
-            )
-
-        # Parse inputs, round begin and end to stepsize
-        self.begin = round_time(begin, stepsize)
-        self.end = round_time(end, stepsize)
-        self.stepsize = stepsize
-
-        # Validate and process API call
-        if self.validate_get():
-            # Perform GET
-            self.get()
 
     def __len__(self) -> int:
         return len(self.timestamp)
@@ -109,24 +88,17 @@ class EphemBase(ACROSSAPIBase):
         """
         return int(np.argmin(np.abs((self.timestamp.datetime - t.datetime))))
 
-    def get(self) -> bool:
-        """
-        Compute the ephemeris for the specified time range with at a
-        time resolution given by self.stepsize.
+    def __init__(self, begin: Time, end: Time, stepsize: u.Quantity = 60 * u.s):
+        # Check if TLE is loaded
+        if self.tle is None:
+            raise HTTPException(
+                status_code=404, detail="No TLE available for this epoch"
+            )
 
-        Note only calculates Spacecraft position, velocity,
-        Sun/Moon position and latitude/longitude of the spacecraft
-        initially.
-
-        Returns
-        -------
-            True if successful, False if not.
-        """
-
-        # Check if all parameters are valid
-        if not self.validate_get():
-            # Compute Ephemeris
-            return False
+        # Parse inputs, round begin and end to stepsize
+        self.begin = round_time(begin, stepsize)
+        self.end = round_time(end, stepsize)
+        self.stepsize = stepsize
 
         # Check the TLE is available
         if self.tle is None:
@@ -134,9 +106,14 @@ class EphemBase(ACROSSAPIBase):
                 status_code=404, detail="No TLE available for this epoch"
             )
 
-        # Round start and end times to stepsize, create array of timestamps
-        steps = int((self.end - self.begin).to(u.s) / (self.stepsize.to(u.s)) + 1)
-        self.timestamp = Time(np.linspace(self.begin, self.end, steps))
+        # Create array of timestamps
+        if self.begin == self.end:
+            self.timestamp = Time([self.begin])
+        else:
+            step = timedelta(seconds=self.stepsize.to_value(u.s))
+            self.timestamp = Time(
+                np.arange(self.begin.datetime, self.end.datetime + step, step)
+            )
 
         # Load in the TLE data
         satellite = Satrec.twoline2rv(self.tle.tle1, self.tle.tle2)
@@ -153,29 +130,28 @@ class EphemBase(ACROSSAPIBase):
             teme_p.with_differentials(teme_v), frame=TEME(obstime=self.timestamp)
         ).itrs
 
-        # Set up astroplan Observer class
-        self.observer = Observer(self.itrs.earth_location)
-
         # Calculate satellite position in GCRS coordinate system vector as
         # array of x,y,z vectors in units of km, and velocity vector as array
         # of x,y,z vectors in units of km/s
-        self.posvec, self.velvec = self.observer.location.get_gcrs_posvel(
-            self.timestamp
-        )
+        self.gcrs = self.itrs.transform_to(GCRS)
+        self.posvec = self.gcrs.cartesian.without_differentials()
+        self.velvec = self.gcrs.velocity.to_cartesian()
 
         # Calculate the position of the Moon relative to the spacecraft
-        self.moon = get_body("moon", self.timestamp, location=self.observer.location)
+        self.moon = get_body("moon", self.timestamp, location=self.itrs.earth_location)
 
         # Calculate the position of the Moon relative to the spacecraft
-        self.sun = get_body("sun", self.timestamp, location=self.observer.location)
+        self.sun = get_body("sun", self.timestamp, location=self.itrs.earth_location)
 
         # Calculate the position of the Earth relative to the spacecraft
-        self.earth = get_body("earth", self.timestamp, location=self.observer.location)
+        self.earth = get_body(
+            "earth", self.timestamp, location=self.itrs.earth_location
+        )
 
         # Calculate the latitude, longitude and distance from the center of the
         # Earth of the satellite
-        self.longitude = self.observer.longitude
-        self.latitude = self.observer.latitude
+        self.longitude = self.itrs.earth_location.lon
+        self.latitude = self.itrs.earth_location.lat
         dist = self.posvec.norm()
 
         # Calculate the Earth radius in degrees
@@ -183,5 +159,3 @@ class EphemBase(ACROSSAPIBase):
             self.earthsize = self.earth_radius * np.ones(len(self))
         else:
             self.earthsize = np.arcsin(R_earth / dist)
-
-        return True
