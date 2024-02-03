@@ -3,48 +3,16 @@
 # All Rights Reserved.
 
 
-from typing import List, Optional
+from typing import List, Optional, Type, Union
 
 import astropy.units as u  # type: ignore
 import numpy as np
 from astropy.time import Time  # type: ignore
-from shapely import Polygon  # type: ignore
 
-from .common import ACROSSAPIBase, round_time
+from .common import ACROSSAPIBase, ceil_time, floor_time, round_time
 from .constraints import SAAPolygonConstraint
 from .ephem import EphemBase
 from .schema import SAAEntry, SAAGetSchema, SAASchema
-
-
-class SAAPolygonBase:
-    """
-    Class to define the Mission SAA Polygon.
-
-    Attributes
-    ----------
-    points
-        List of points defining the SAA polygon.
-    saapoly
-        Shapely Polygon object defining the SAA polygon.
-
-    """
-
-    saapoly: Polygon = [
-        (39.0, -30.0),
-        (36.0, -26.0),
-        (28.0, -21.0),
-        (6.0, -12.0),
-        (-5.0, -6.0),
-        (-21.0, 2.0),
-        (-30.0, 3.0),
-        (-45.0, 2.0),
-        (-60.0, -2.0),
-        (-75.0, -7.0),
-        (-83.0, -10.0),
-        (-87.0, -16.0),
-        (-86.0, -23.0),
-        (-83.0, -30.0),
-    ]
 
 
 class SAABase(ACROSSAPIBase):
@@ -73,6 +41,8 @@ class SAABase(ACROSSAPIBase):
         List of SAA entries
     status
         Status of SAA query
+    insaacons
+        SAA constraint class to use for SAA calculations
     """
 
     _schema = SAASchema
@@ -82,11 +52,12 @@ class SAABase(ACROSSAPIBase):
     end: Time
     timestamp: Time
 
-    # Internal things
-    saa: SAAPolygonBase
+    # Constraint class to use for SAA calculations
+    insaacons: SAAPolygonConstraint
 
     stepsize: u.Quantity
     entries: List[SAAEntry]  # type: ignore
+    ephemclass: Type[EphemBase]
 
     def __init__(
         self,
@@ -98,23 +69,29 @@ class SAABase(ACROSSAPIBase):
         """
         Initialize the SAA class.
         """
-        # Parse parameters
+        # Round start and end times to stepsize resolution
         self.begin = round_time(begin, stepsize)
         self.end = round_time(end, stepsize)
         self.stepsize = stepsize
-        if ephem is not None:
-            self.ephem = ephem
+
+        # Instantiate the ephem class here if not passed as an argument. By
+        # default we'll calculate ephem for a whole day, to aide with caching.
+        if ephem is None:
+            ephem = self.ephemclass(
+                begin=floor_time(self.begin, 1 * u.day),
+                end=ceil_time(self.end, 1 * u.day),
+                stepsize=self.stepsize,
+            )
+        else:
             # Make sure stepsize matches supplied ephemeris
             self.stepsize = ephem.stepsize
-
-        # Set up SAA polygon
-        self.saacons = SAAPolygonConstraint(self.saa.saapoly)
+        self.ephem = ephem
 
         # If request validates, do a get
         if self.validate_get():
             self.get()
 
-    def get(self) -> bool:
+    def get(self) -> Union[bool, np.ndarray]:
         """
         Calculate list of SAA entries for a given date range.
 
@@ -123,34 +100,18 @@ class SAABase(ACROSSAPIBase):
             Did the query succeed?
         """
         # Determine the times to calculate the SAA
-        steps = (self.end - self.begin).to(u.s) / (self.stepsize.to(u.s)) + 1
+        steps = int((self.end - self.begin).to(u.s) / (self.stepsize.to(u.s)) + 1)
         self.timestamp = Time(np.linspace(self.begin, self.end, steps))
 
         # Calculate SAA windows
-        self.entries = self.make_windows(
-            np.logical_not(self.saacons(times=self.timestamp, ephem=self.ephem)),
-            wintype=SAAEntry,
+        self.entries = self.saa_windows(
+            self.insaacons(time=self.timestamp, ephem=self.ephem),  # type: ignore
         )
 
         return True
 
-    def insaawindow(self, t):
-        """
-        Check if the given Time falls within any of the SAA windows in list.
-
-        Arguments
-        ---------
-        t
-            The Time to check.
-
-        Returns
-        -------
-            True if the Time falls within any SAA window, False otherwise.
-        """
-        return True in [True for win in self.entries if t >= win.begin and t <= win.end]
-
     @classmethod
-    def insaa(cls, t: Time) -> bool:
+    def insaa(cls, t: Time) -> Union[bool, np.ndarray]:
         """
         For a given time, are we in the SAA?
 
@@ -164,13 +125,12 @@ class SAABase(ACROSSAPIBase):
             True if we're in the SAA, False otherwise
         """
         # Calculate an ephemeris for the exact time requested
-        cls.saacons = SAAPolygonConstraint(cls.saa.saapoly)
         ephem = cls.ephemclass(begin=t, end=t, stepsize=1e-6 * u.s)  # type: ignore
-        return cls.saacons(times=t, ephem=ephem)[0]
+        return cls.insaacons(time=t, ephem=ephem)
 
-    def make_windows(self, inconstraint: list, wintype=SAAEntry) -> list:
+    def saa_windows(self, insaa: np.ndarray) -> list:
         """
-        Record SAA windows from array
+        Record SAAEntry from array of booleans and timestamps
 
         Parameters
         ----------
@@ -184,23 +144,12 @@ class SAABase(ACROSSAPIBase):
         list
             List of SAAEntry objects
         """
-        windows = []
-        inocc = True
-        for i in range(len(inconstraint)):
-            if inocc is True and not inconstraint[i]:
-                inocc = False
-                inindex = i
-            if inocc is False and inconstraint[i]:
-                inocc = True
-                windows.append(
-                    wintype(
-                        begin=self.timestamp[inindex],
-                        end=self.timestamp[i - 1],
-                    )
-                )  # type: ignore
+        # Find the start and end of the SAA windows
+        buff = np.concatenate(([False], insaa.tolist(), [False]))
+        begin = np.flatnonzero(~buff[:-1] & buff[1:])
+        end = np.flatnonzero(buff[:-1] & ~buff[1:])
+        indices = np.column_stack((begin, end - 1))
+        windows = self.timestamp[indices]
 
-        if not inocc:
-            win = wintype(begin=self.timestamp[inindex], end=self.timestamp[i])
-            if (win.end - win.begin).to(u.s) > 0:
-                windows.append(win)
-        return windows
+        # Return as array of SAAEntry objects
+        return [SAAEntry(begin=win[0], end=win[1]) for win in windows]

@@ -3,24 +3,27 @@
 # All Rights Reserved.
 
 from functools import cached_property
-from typing import List
+from typing import List, Optional
 
 import astropy.units as u  # type: ignore
 import numpy as np
+from .constraints import (
+    EarthLimbConstraint,
+    MoonConstraint,
+    PoleConstraint,
+    RamConstraint,
+    SAAPolygonConstraint,
+    SunConstraint,
+)
 from astropy.coordinates import SkyCoord  # type: ignore
 from astropy.time import Time  # type: ignore
-from shapely import Polygon  # type: ignore
 
-from .constraints import SAAPolygonConstraint  # type: ignore
-
-from .common import ACROSSAPIBase, round_time
+from .common import ACROSSAPIBase
 from .ephem import EphemBase
-from .saa import SAABase
 from .schema import VisibilityGetSchema, VisibilitySchema, VisWindow
-from .window import MakeWindowBase
 
 
-class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
+class VisibilityBase(ACROSSAPIBase):
     """
     Calculate visibility of a given object.
 
@@ -51,7 +54,6 @@ class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
     _schema = VisibilitySchema
     _get_schema = VisibilityGetSchema
 
-    # Constraint definitions
     ram_cons: bool
     pole_cons: bool
     sun_cons: bool
@@ -67,14 +69,30 @@ class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
     earthextra: float
     moonextra: float
     isat: bool
+    saapoly: Optional[list]
+
+    # Constraint definitions
+    ram_constraint: Optional[RamConstraint] = None
+    pole_constraint: Optional[PoleConstraint] = None
+    sun_constraint: Optional[SunConstraint] = None
+    moon_constraint: Optional[MoonConstraint] = None
+    earth_constraint: Optional[EarthLimbConstraint] = None
+    saa_constraint: Optional[SAAPolygonConstraint] = None
+
+    inramcon: np.ndarray
+    inpolecon: np.ndarray
+    insuncon: np.ndarray
+    inmooncon: np.ndarray
+    inearthcon: np.ndarray
+    insaacon: np.ndarray
+    inconstraint: np.ndarray
+
     entries: List[VisWindow]
     ra: float
     dec: float
-    saapoly: Polygon
 
     begin: Time
     end: Time
-    saa: SAABase
     ephem: EphemBase
     stepsize: u.Quantity
 
@@ -85,6 +103,24 @@ class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
         self.end = end
         self.entries = list()
         self.stepsize = 60 * u.s
+
+        # Set up constraints
+        if self.ram_cons:
+            self.ram_constraint = RamConstraint(self.ramsize)
+        if self.pole_cons:
+            self.pole_constraint = PoleConstraint(self.earthoccult + self.earthextra)
+        if self.sun_cons:
+            self.sun_constraint = SunConstraint(self.sunoccult + self.sunextra)
+        if self.moon_cons:
+            self.moon_constraint = MoonConstraint(self.moonoccult + self.moonextra)
+        if self.earth_cons:
+            self.earth_constraint = EarthLimbConstraint(
+                self.earthoccult + self.earthextra
+            )
+        if self.pole_cons:
+            self.pole_constraint = PoleConstraint(self.earthoccult + self.earthextra)
+        if self.saa_cons and self.saapoly is not None:
+            self.saa_constraint = SAAPolygonConstraint(self.saapoly)
 
         # Parse argument keywords
         if self.validate_get():
@@ -98,102 +134,6 @@ class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
         return len(self.timestamp)
 
     @cached_property
-    def timestamp(self):
-        """
-        Create array of timestamps for the visibility period being calculated.
-
-        Returns
-        -------
-            Array of timestamps.
-        """
-        return self.ephem.timestamp[self.ephstart : self.ephstop]
-
-    @cached_property
-    def inearthcons(self) -> List[bool]:
-        """
-        Determines if the celestial object is within the satellite Earth
-        constraint.
-
-        Returns
-        -------
-            A list of booleans indicating whether the celestial object is
-            within the Earth's constraints.
-        """
-
-        self.earthang = self.ephem.earth[self.ephstart : self.ephstop].separation(
-            self.skycoord
-        )
-
-        earth_cons = self.earthoccult  # type: ignore
-        if not self.isat:
-            earth_cons = self.earthoccult + self.earthextra  # type: ignore
-
-        return (
-            self.earthang
-            < earth_cons + self.ephem.earthsize[self.ephstart : self.ephstop]
-        )
-
-    @cached_property
-    def inramcons(self) -> np.ndarray:
-        """
-        Calculate Ram constraint (avoidance of direction of motion)
-
-        Returns
-        -------
-            A boolean array indicating whether each point in the trajectory
-            satisfies the ram constraint.
-        """
-        # calculate the angle between the velocity vector and the RA/Dec vector
-        self.ramang = SkyCoord(
-            self.ephem.velvec[self.ephstart : self.ephstop]
-        ).separation(self.skycoord)
-
-        # calculate the size of the ram constraint
-        ram_cons = self.ramsize  # type: ignore
-        if not self.isat:
-            ram_cons = self.ramsize + self.ramextra  # type: ignore
-        # return the constraint
-        return self.ramang < ram_cons
-
-    @cached_property
-    def insuncons(self):
-        """
-        Calculate Sun constraint
-
-        Returns
-        -------
-            True if the separation between the sun and the sky coordinates is
-            less than the sun constraint, False otherwise.
-        """
-        self.sunang = self.ephem.sun[self.ephstart : self.ephstop].separation(
-            self.skycoord
-        )
-
-        sun_cons = self.sunoccult  # type: ignore
-        if not self.isat:
-            sun_cons = self.sunoccult + self.sunextra  # type: ignore
-        return self.sunang < sun_cons
-
-    @cached_property
-    def inmooncons(self):
-        """
-        Calculate Moon constraint.
-
-        Returns
-        -------
-            True if the separation between the moon and the sky coordinates is
-            less than the moon constraint, False otherwise.
-        """
-        self.moonang = self.ephem.moon[self.ephstart : self.ephstop].separation(
-            self.skycoord
-        )
-
-        moon_cons = self.moonoccult  # type: ignore
-        if not self.isat:
-            moon_cons = self.moonoccult + self.moonextra  # type: ignore
-        return self.moonang < moon_cons
-
-    @cached_property
     def skycoord(self):
         """
         Create array of RA/Dec and vector of these.
@@ -204,35 +144,6 @@ class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
             Array of RA/Dec coordinates.
         """
         return SkyCoord(self.ra * u.deg, self.dec * u.deg)
-
-    @cached_property
-    def saa_windows(self):
-        """
-        Calculate SAA windows.
-
-        Returns
-        -------
-            An array representing the SAA windows.
-        """
-        return np.array([not s for s in self.insaacons])
-
-    def insaa(self, t: Time) -> bool:
-        """
-        For a given time, checks if we are in the SAA (South Atlantic Anomaly) as calculated by saa_windows.
-
-        Parameters
-        ----------
-        t
-            The time to check.
-
-        Returns
-        -------
-            True if the given time is within any of the SAA windows, False otherwise.
-        """
-        for win in self.saa_windows:
-            if t >= win.begin and t <= win.end:
-                return True
-        return False
 
     def visible(self, t: Time) -> bool:
         """
@@ -253,15 +164,18 @@ class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
         return False
 
     @cached_property
-    def ephstart(self) -> int:
+    def ephstart(self) -> Optional[int]:
         """
         Returns the ephemeris index of the beginning time.
         """
         return self.ephem.ephindex(self.begin)
 
     @cached_property
-    def ephstop(self) -> int:
-        return self.ephem.ephindex(self.end) + 1
+    def ephstop(self) -> Optional[int]:
+        i = self.ephem.ephindex(self.end)
+        if i is None:
+            return None
+        return i + 1
 
     def get(self) -> bool:
         """
@@ -271,9 +185,6 @@ class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
         -------
             True if successful, False otherwise.
         """
-        # Round begin to the nearest minute
-        self.begin = round_time(self.begin, self.stepsize)
-
         # Reset windows
         self.entries = list()
 
@@ -281,28 +192,66 @@ class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
         if not self.validate_get():
             return False
 
-        # Set up the constraint array
-        self.inconstraint = np.zeros(len(self.timestamp), dtype=bool)
+        # Calculate the times to calculate the visibility
+        self.timestamp = self.ephem.timestamp[self.ephstart : self.ephstop]
 
         # Calculate SAA constraint
-        if self.saa_cons is True:
-            self.inconstraint += self.insaacons
+        if self.saa_constraint is not None:
+            self.insaacon = self.saa_constraint(time=self.timestamp, ephem=self.ephem)  # type: ignore
+        else:
+            self.insaacon = np.full(len(self.timestamp), False)
 
         # Calculate Earth constraint
-        if self.earth_cons is True:
-            self.inconstraint += self.inearthcons
+        if self.earth_constraint is not None:
+            self.inearthcon = self.earth_constraint(
+                coord=self.skycoord, time=self.timestamp, ephem=self.ephem  # type: ignore
+            )
+        else:
+            self.inearthcon = np.full(len(self.timestamp), False)
 
         # Calculate Moon constraint
-        if self.moon_cons is True:
-            self.inconstraint += self.inmooncons
+        if self.moon_constraint is not None:
+            self.inmooncon = self.moon_constraint(
+                coord=self.skycoord, time=self.timestamp, ephem=self.ephem  # type: ignore
+            )
+        else:
+            self.inmooncon = np.full(len(self.timestamp), False)
 
         # Calculate Sun constraint
-        if self.sun_cons is True:
-            self.inconstraint += self.insuncons
+        if self.sun_constraint is not None:
+            self.insuncon = self.sun_constraint(
+                coord=self.skycoord, time=self.timestamp, ephem=self.ephem  # type: ignore
+            )
+        else:
+            self.insuncon = np.full(len(self.timestamp), False)
+
+        # Calculate Pole constraint
+        if self.pole_constraint is not None:
+            self.inpolecon = self.pole_constraint(
+                coord=self.skycoord, time=self.timestamp, ephem=self.ephem  # type: ignore
+            )
+        else:
+            self.inpolecon = np.full(len(self.timestamp), False)
 
         # Calculate Ram constraint
-        if self.ram_cons is True:
-            self.inconstraint += self.inramcons
+        if self.ram_constraint is not None:
+            self.inramcon = self.ram_constraint(
+                coord=self.skycoord,
+                time=self.timestamp,
+                ephem=self.ephem,  #   type: ignore
+            )
+        else:
+            self.inramcon = np.full(len(self.timestamp), False)
+
+        # Calculate combined constraints
+        self.inconstraint = (
+            self.insuncon
+            | self.inmooncon
+            | self.inpolecon
+            | self.inearthcon
+            | self.insaacon
+            | self.inramcon
+        )
 
         # Calculate good windows from combined constraints
         self.entries = self.make_windows(self.inconstraint.tolist())
@@ -322,32 +271,62 @@ class VisibilityBase(ACROSSAPIBase, MakeWindowBase):
         -------
             String indicating what constraint is in place at given time index
         """
+        # Sanity check
+        assert self.ephstart is not None
+        assert self.ephstop is not None
+
         # Check if index is out of bounds
         if index == self.ephstart - 1 or index == self.ephstop - 1:
             return "Window"
 
         # Return what constraint is causing the window to open/close
         if self.inconstraint[index]:
-            if self.insuncons[index]:
+            if self.sun_constraint is not None and self.insuncon[index]:
                 return "Sun"
-            elif self.inmooncons[index]:
+            elif self.moon_constraint is not None and self.inmooncon[index]:
                 return "Moon"
-            elif self.inearthcons[index]:
+            elif self.pole_constraint is not None and self.inpolecon[index]:
+                return "Pole"
+            elif self.earth_constraint is not None and self.inearthcon[index]:
                 return "Earth"
+            elif self.saa_constraint is not None and self.insaacon[index]:
+                return "SAA"
             else:
                 return "Unknown"
         else:
             return "None"
 
-    @cached_property
-    def insaacons(self) -> np.ndarray:
+    def make_windows(self, inconstraint: np.ndarray) -> list:
         """
-        Calculate SAA constraint using SAA Polygon
+        Record SAAEntry from array of booleans and timestamps
+
+        Parameters
+        ----------
+        inconstraint : list
+            List of booleans indicating if the spacecraft is in the SAA
+        wintype : VisWindow
+            Type of window to create (default: VisWindow)
 
         Returns
         -------
-            A list of booleans indicating whether the spacecraft is
-            within the SAA polygon.
-
+        list
+            List of SAAEntry objects
         """
-        return SAAPolygonConstraint(self.saapoly)(self.timestamp, self.ephem)
+        # Find the start and end of the SAA windows
+        buff: np.ndarray = np.concatenate(
+            ([False], np.logical_not(inconstraint), [False])
+        )
+        begin = np.flatnonzero(~buff[:-1] & buff[1:])
+        end = np.flatnonzero(buff[:-1] & ~buff[1:])
+        indices = np.column_stack((begin, end - 1))
+
+        # Return as list of VisWindows
+        return [
+            VisWindow(
+                begin=self.ephem.timestamp[i[0]],
+                end=self.ephem.timestamp[i[1]],
+                initial=self.constraint(i[0] - 1),
+                final=self.constraint(i[1] + 1),
+            )
+            for i in indices
+        ]

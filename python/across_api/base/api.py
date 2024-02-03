@@ -374,8 +374,8 @@ async def exposure(
             description="Exposure time in seconds.",
         ),
     ] = 200,
-) -> float:
-    return exposure
+) -> u.Quantity:
+    return exposure * u.s
 
 
 async def offset(
@@ -388,9 +388,8 @@ async def offset(
             description="Offset window from T0 by this amount (seconds).",
         ),
     ] = -50,
-) -> float:
-    return offset
-
+) -> u.Quantity:
+    return offset * u.s
 
 OffsetDep = Annotated[float, Depends(offset)]
 
