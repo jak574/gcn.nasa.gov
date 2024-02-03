@@ -49,8 +49,8 @@ def getslice(time: Time, ephem: EphemBase) -> slice:
 class SAAPolygonConstraint:
     """
     Polygon based SAA constraint. The SAA is defined by a Shapely Polygon, and
-    this constraint will calculate for a given ephemeris whether the spacecraft
-    is in that SAA polygon.
+    this constraint will calculate for a given set of times and a given
+    ephemeris whether the spacecraft is in that SAA polygon.
 
     Attributes
     ----------
@@ -69,13 +69,18 @@ class SAAPolygonConstraint:
 
         Arguments
         ---------
+        time
+            The time to calculate the constraint for.
         ephem
-            The spacecraft ephemeris
+            The spacecraft ephemeris, must be precalculated. Note: The
+            ephemeris can be calculated for a longer time range than the `time`
+            argument, but it must contain the time(s) in the `time` argument.
 
         Returns
         -------
-            Array of booleans for every timetamp in the calculated ephemeris
-            returning True if the spacecraft is in the SAA polygon at that time.
+            Array of booleans for every value in `time` returning True if the
+            spacecraft is in the SAA polygon at that time. If `time` is a
+            scalar then a single boolean is returned.
         """
 
         # Find a slice what the part of the ephemeris that we're using
