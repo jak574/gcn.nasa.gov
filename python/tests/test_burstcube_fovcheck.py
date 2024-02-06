@@ -63,7 +63,7 @@ def test_burstcube_fov_point_source():
     # Should report True if the trigger was in the FOV.
     fov = BurstCubeFOV()
     assert (
-        fov.infov_point(skycoord=skycoord, time=trigger_time, ephem=eph) == True  # noqa: E712
+        fov.probability_infov(skycoord=skycoord, time=trigger_time, ephem=eph) == 1.0  # noqa: E712
     ), "BurstCubeFOV should report this trigger as outside of Earth Occultation"
 
 
@@ -71,7 +71,7 @@ def test_burstcube_fov_error():
     """Check that for a circular error box of radius 20 degrees, the infov
     fraction of the probability is 0.92439."""
     fov = BurstCubeFOV()
-    infov_burstcube = fov.infov_circular_error(
+    infov_burstcube = fov.probability_infov(
         skycoord=skycoord, time=trigger_time, ephem=eph, error_radius=20 * u.deg
     )
     assert infov_burstcube == 0.92439
@@ -82,5 +82,5 @@ def test_burstcube_fov_healpix():
     healpix = hdu[1].data["PROB"]
     fov = BurstCubeFOV()
     assert (
-        fov.infov_hp(healpix, trigger_time, eph) == 1.0
+        fov.probability_infov(healpix_loc=healpix, time=trigger_time, ephem=eph) == 1.0
     ), "100% of the probability of GW170817 should be inside the FOV"
