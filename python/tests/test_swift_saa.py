@@ -5,11 +5,25 @@
 
 import numpy as np
 from astropy.time import Time  # type: ignore
-import astropy.units as u  # type: ignore
 from across_api.swift.ephem import SwiftEphem  # type: ignore
 from across_api.swift.tle import SwiftTLE  # type: ignore
 from across_api.base.schema import TLEEntry  # type: ignore
-from across_api.swift.saa import SwiftSAA  # type: ignore
+from across_api.swift.saa import swift_saa_constraint  # type: ignore
+
+
+def make_windows(insaa, timestamp):
+    """Function to make start and end windows from a boolean array of SAA
+    constraints and array of timestamps"""
+    # Find the start and end of the SAA windows
+    buff = np.concatenate(([False], insaa.tolist(), [False]))
+    begin = np.flatnonzero(~buff[:-1] & buff[1:])
+    end = np.flatnonzero(buff[:-1] & ~buff[1:])
+    indices = np.column_stack((begin, end - 1))
+    windows = timestamp[indices]
+
+    # Return as array of SAAEntry objects
+    return np.array([(win[0].unix, win[1].unix) for win in windows])
+
 
 # Define a TLE by hand
 satname = "SWIFT"
@@ -23,11 +37,11 @@ tle = SwiftTLE(epoch=Time("2024-01-29"), tle=tleentry)
 # Calculate a Swift Ephemeris
 eph = SwiftEphem(begin=Time("2024-01-29"), end=Time("2024-01-30"), tle=tle.tle)
 
-# Calculate Swift SAA passages
-saa = SwiftSAA(begin=Time("2024-01-29"), end=Time("2024-01-30"), ephem=eph)
+# Calculate a bool array for when Swift is in SAA
+swift_insaa = swift_saa_constraint(time=eph.timestamp, ephem=eph)
 
-# Make array of SAA entries in unix time
-saa_entries = np.array([(e.begin.unix, e.end.unix) for e in saa.entries])
+# Convert this to a list of start/stop windows
+saa_entries = make_windows(swift_insaa, eph.timestamp)
 
 # Calculate Swift SAA passages using Swift API
 # from swifttools.swift_too import SAA
@@ -54,5 +68,5 @@ swift_saa_entries = np.array(
 def test_swift_saa():
     """Assert that the SAA enter/exit times are within 60 seconds of the Swift
     API, where 60s is the default stepsize"""
-    assert len(swift_saa_entries) == len(saa.entries)
-    assert (np.abs(saa_entries - swift_saa_entries) <= saa.stepsize.to(u.s).value).all()
+    assert len(swift_saa_entries) == len(saa_entries)
+    assert (np.abs(saa_entries - swift_saa_entries) <= 60).all()
