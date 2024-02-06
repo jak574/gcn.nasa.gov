@@ -8,7 +8,7 @@ from astropy.time import Time  # type: ignore
 from across_api.swift.ephem import SwiftEphem  # type: ignore
 from across_api.swift.tle import SwiftTLE  # type: ignore
 from across_api.base.schema import TLEEntry  # type: ignore
-from across_api.swift.saa import swift_saa_constraint  # type: ignore
+from across_api.swift.constraints import swift_saa_constraint  # type: ignore
 
 
 def make_windows(insaa, timestamp):
