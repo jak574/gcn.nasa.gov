@@ -69,7 +69,7 @@ def test_burstcube_fov_point_source():
 
 def test_burstcube_fov_error():
     """Check that for a circular error box of radius 20 degrees, the infov
-    fraction of the probability is 0.94212."""
+    fraction of the probability is 0.92439."""
     fov = BurstCubeFOV()
     infov_burstcube = fov.infov_circular_error(
         skycoord=skycoord, time=trigger_time, ephem=eph, error_radius=20 * u.deg

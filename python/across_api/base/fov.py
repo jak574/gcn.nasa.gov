@@ -2,8 +2,7 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from typing import Optional, Union
-
+from typing import Union
 import astropy_healpix as ah  # type: ignore
 import astropy.units as u  # type: ignore
 from astropy.io.fits import FITS_rec  # type: ignore
@@ -87,42 +86,18 @@ class FOVBase(ACROSSAPIBase):
     ephem: EphemBase
     earth_constraint: EarthLimbConstraint
 
-    def earth_occulted(
+    def infov_point(
         self,
         skycoord: SkyCoord,
         time: Time,
         ephem: EphemBase,
     ) -> Union[bool, np.ndarray]:
         """
-        Check if a celestial object is occulted by the Earth.
+        Is a point source target at a given coordinate, `skycoord` inside the
+        FOV and not Earth occulted.
 
-        Parameters
-        ----------
-        skycoord: SkyCoord, optional
-            SkyCoord object representing the celestial object.
-        earth
-            SkyCoord object representing the Earth.
-        earth_size
-            Angular size of the Earth.
-
-        Returns
-        -------
-        bool or np.ndarray
-            True if the celestial object is occulted by the Earth, False otherwise.
-        """
-        return self.earth_constraint(coord=skycoord, time=time, ephem=ephem)
-
-    def infov(
-        self,
-        skycoord: SkyCoord,
-        time: Time,
-        ephem: EphemBase,
-    ) -> Union[bool, np.ndarray]:
-        """
-        Is the target at a given coordinate, inside the given coordinates
-        inside the FOV and not Earth occulted. Note that this method only
-        checks for Earth occultation, so defines a simple 'all-sky' FOV with no
-        other constraints.
+        Note that this method only checks if the given coordinate is Earth
+        occulted, so defines a simple 'all-sky' FOV with no other constraints.
 
         Parameters
         ----------
@@ -138,13 +113,10 @@ class FOVBase(ACROSSAPIBase):
         bool
             True or False
         """
-        # If simple is True or error radius is below a critical value, just
-        # treat as a point source
+
         # Check for Earth occultation
-        earth_occultation = self.earth_occulted(
-            skycoord=skycoord,
-            time=time,
-            ephem=ephem,
+        earth_occultation = self.earth_constraint(
+            coord=skycoord, time=time, ephem=ephem
         )
         return np.logical_not(earth_occultation)
 
@@ -195,7 +167,7 @@ class FOVBase(ACROSSAPIBase):
         # treat as a point source
         if simple or error_radius < point_source_tolerance:
             # Check for Earth occultation
-            return self.infov(skycoord=skycoord, time=time, ephem=ephem)
+            return self.infov_point(skycoord=skycoord, time=time, ephem=ephem)
 
         # Create a HEALPix map of the probability density distribution
         prob = healpix_map_from_position_error(
@@ -206,7 +178,6 @@ class FOVBase(ACROSSAPIBase):
             healpix_loc=prob,
             time=time,
             ephem=ephem,
-            healpix_nside=nside,
         )
 
     def infov_hp(
@@ -214,19 +185,20 @@ class FOVBase(ACROSSAPIBase):
         healpix_loc: FITS_rec,
         time: Time,
         ephem: EphemBase,
-        healpix_nside: Optional[int] = None,
         healpix_order: str = "NESTED",
     ) -> float:
         """
         Calculates the amount of probability inside the field of view (FOV)
         defined by the given parameters. This works by calculating a SkyCoord
-        containing every non-zero probability pixel, uses the `infov` method to
-        check which ones are inside the FOV, and then finding the integrated
-        probability of the remaining pixels. Note this method makes no attempt
-        to deal with pixels that are only partially inside the FOV.
+        containing every non-zero probability pixel, uses the `infov_point`
+        method to check which ones are inside the FOV, and then finding the
+        integrated probability of the remaining pixels. Note this method makes
+        no attempt to deal with pixels that are only partially inside the FOV,
+        i.e. Earth occultation is calculated for location of the center of each
+        HEALPix pixel.
 
-        If `healpix_order` == "NUNIQ", it assumes that `healpix_loc` contains
-        a multi-order HEALPix map.
+        If `healpix_order` == "NUNIQ", it assumes that `healpix_loc` contains a
+        multi-order HEALPix map, and handles that accordingly.
 
         Parameters
         ----------
@@ -238,12 +210,6 @@ class FOVBase(ACROSSAPIBase):
             calculated based on the length of healpix_loc.
         healpix_order
             The ordering scheme of the HEALPix map. Default is "NESTED".
-        earth
-            SkyCoord of the Earth's center in degrees. If provided along with
-            earth_size, it will be used to remove Earth occulted pixels from
-            the FOV.
-        earth_size
-            The size of the Earth in degrees.
 
         Returns
         -------
@@ -280,7 +246,7 @@ class FOVBase(ACROSSAPIBase):
 
         # Calculate pixel indicies of the all the regions inside of the FOV
         visible_pixels = nonzero_prob_pixels[
-            self.infov(skycoord=skycoord, time=time, ephem=ephem)
+            self.infov_point(skycoord=skycoord, time=time, ephem=ephem)
         ]
 
         # Calculate the amount of probability inside the FOV
