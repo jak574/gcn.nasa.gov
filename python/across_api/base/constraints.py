@@ -4,7 +4,7 @@
 
 from typing import Union
 from astropy.time import Time  # type: ignore
-import numpy as np  # type: ignore
+import numpy as np
 from shapely import Polygon, points  # type: ignore
 
 from .ephem import EphemBase
