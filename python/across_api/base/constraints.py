@@ -2,11 +2,13 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from typing import Union
-from astropy.time import Time  # type: ignore
-from astropy.coordinates import SkyCoord  # type: ignore
+from abc import ABC, abstractmethod
+from typing import Optional, Union
+
 import astropy.units as u  # type: ignore
 import numpy as np
+from astropy.coordinates import Angle, SkyCoord  # type: ignore
+from astropy.time import Time  # type: ignore
 from shapely import Polygon, points  # type: ignore
 
 from .ephem import EphemBase
@@ -48,7 +50,17 @@ def getslice(time: Time, ephem: EphemBase) -> slice:
         return slice(ephem.ephindex(time[0]), ephem.ephindex(time[-1]) + 1)
 
 
-class SAAPolygonConstraint:
+class Constraint(ABC):
+    """Define the basic structure of a Constraint class."""
+
+    @abstractmethod
+    def __call__(
+        self, time: Time, ephem: EphemBase, skycoord: Optional[SkyCoord] = None
+    ) -> Union[bool, np.ndarray]:
+        pass
+
+
+class SAAPolygonConstraint(Constraint):
     """
     Polygon based SAA constraint. The SAA is defined by a Shapely Polygon, and
     this constraint will calculate for a given set of times and a given
@@ -66,7 +78,9 @@ class SAAPolygonConstraint:
     def __init__(self, polygon: list):
         self.polygon = Polygon(polygon)
 
-    def __call__(self, time: Time, ephem: EphemBase) -> Union[bool, np.ndarray]:
+    def __call__(
+        self, time: Time, ephem: EphemBase, skycoord: Optional[SkyCoord] = None
+    ) -> Union[bool, np.ndarray]:
         """
         Return a bool array indicating whether the spacecraft is in constraint
         for a given ephemeris.
@@ -76,7 +90,7 @@ class SAAPolygonConstraint:
         time
             The time to calculate the constraint for.
         ephem
-            The spacecraft ephemeris, must be precalculated. Note: The
+            The spacecraft ephemeris, must be precalculated. NOTE: The
             ephemeris can be calculated for a longer time range than the `time`
             argument, but it must contain the time(s) in the `time` argument.
 
@@ -97,15 +111,15 @@ class SAAPolygonConstraint:
         return inconstraint[0] if time.isscalar else inconstraint
 
 
-class EarthLimbConstraint:
+class EarthLimbConstraint(Constraint):
     """
     For a given Earth limb avoidance angle, is a given coordinate inside this
     constraint?
 
     Parameters
     ----------
-    earthoccult
-        The Earth limb avoidance angle.
+    min_angle
+        The minimum angle from the Earth limb that the spacecraft can point.
 
     Methods
     -------
@@ -114,19 +128,24 @@ class EarthLimbConstraint:
 
     """
 
-    earthoccult: u.Quantity
+    min_angle: u.Quantity
 
-    def __init__(self, earthoccult: u.Quantity):
-        self.earthoccult = earthoccult
+    def __init__(self, min_angle: u.Quantity):
+        self.min_angle = Angle(min_angle)
 
     def __call__(
         self,
-        coord: SkyCoord,
         time: Time,
         ephem: EphemBase,
+        skycoord: Optional[SkyCoord] = None,
     ) -> Union[bool, np.ndarray]:
         """
-        Check if a given coordinate is inside the constraint.
+        Check for a given time, ephemeris and coordinate if positions given are
+        inside the Earth limb constraint. This is done by checking if the
+        separation between the Earth and the spacecraft is less than the
+        Earth's angular radius plus the minimum angle.
+
+        NOTE: Assumes a circular approximation for Earth.
 
         Parameters
         ----------
@@ -140,9 +159,12 @@ class EarthLimbConstraint:
         Returns
         -------
         bool
-            `True` if the coordinate is inside the constraint, `False` otherwise.
+            `True` if the coordinate is inside the constraint, `False`
+            otherwise.
 
         """
+        # This class requires a SkyCoord object to be passed
+        assert skycoord is not None, "SkyCoord object must be passed"
 
         # Find a slice what the part of the ephemeris that we're using
         i = getslice(time, ephem)
@@ -151,7 +173,7 @@ class EarthLimbConstraint:
         # inefficient.
         #
         # >>> inconstraint = (
-        # >>>    ephem.earth[i].separation(coord) < ephem.earthsize[i] + self.earthoccult
+        # >>>    ephem.earth[i].separation(coord) < ephem.earthsize[i] + self.min_angle
         # >>> )
         #
         # The method below is quicker*, but gives a value that's off by a few
@@ -164,9 +186,9 @@ class EarthLimbConstraint:
         # every pixel in an NSIDE=1024 HEALPix map, this means 1s vs 3s on a M1
         # Mac.
         inconstraint = (
-            SkyCoord(ephem.earth[i].ra, ephem.earth[i].dec).separation(coord)
-            < ephem.earthsize[i] + self.earthoccult
+            SkyCoord(ephem.earth[i].ra, ephem.earth[i].dec).separation(skycoord)
+            < ephem.earthsize[i] + self.min_angle
         )
 
         # Return the result as True or False, or an array of True/False
-        return inconstraint[0] if time.isscalar and coord.isscalar else inconstraint
+        return inconstraint[0] if time.isscalar and skycoord.isscalar else inconstraint
