@@ -152,6 +152,7 @@ class EarthLimbConstraint:
         # Find a slice what the part of the ephemeris that we're using
         i = get_slice(time, ephem)
 
+
         # Calculate the angular distance between the center of the Earth and
         # the object. Note that creating the SkyCoord here from ra/dec stored
         # in the ephemeris `earth` is 3x faster than just doing the separation
@@ -162,6 +163,7 @@ class EarthLimbConstraint:
         )
 
         # Return the result as True or False, or an array of True/False
+
         return (
             in_constraint[0] if time.isscalar and skycoord.isscalar else in_constraint
         )
