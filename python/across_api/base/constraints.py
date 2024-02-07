@@ -4,6 +4,8 @@
 
 from typing import Union
 from astropy.time import Time  # type: ignore
+from astropy.coordinates import SkyCoord  # type: ignore
+import astropy.units as u  # type: ignore
 import numpy as np
 from shapely import Polygon, points  # type: ignore
 
@@ -59,6 +61,8 @@ class SAAPolygonConstraint:
 
     """
 
+    polygon: Polygon
+
     def __init__(self, polygon: list):
         self.polygon = Polygon(polygon)
 
@@ -91,3 +95,78 @@ class SAAPolygonConstraint:
         )
         # Return the result as True or False, or an array of True/False
         return inconstraint[0] if time.isscalar else inconstraint
+
+
+class EarthLimbConstraint:
+    """
+    For a given Earth limb avoidance angle, is a given coordinate inside this
+    constraint?
+
+    Parameters
+    ----------
+    earthoccult
+        The Earth limb avoidance angle.
+
+    Methods
+    -------
+    __call__(coord, ephem, earthsize=None)
+        Checks if a given coordinate is inside the constraint.
+
+    """
+
+    earthoccult: u.Quantity
+
+    def __init__(self, earthoccult: u.Quantity):
+        self.earthoccult = earthoccult
+
+    def __call__(
+        self,
+        coord: SkyCoord,
+        time: Time,
+        ephem: EphemBase,
+    ) -> Union[bool, np.ndarray]:
+        """
+        Check if a given coordinate is inside the constraint.
+
+        Parameters
+        ----------
+        coord
+            The coordinate to check.
+        time
+            The time to check.
+        ephem
+            The ephemeris object.
+
+        Returns
+        -------
+        bool
+            `True` if the coordinate is inside the constraint, `False` otherwise.
+
+        """
+
+        # Find a slice what the part of the ephemeris that we're using
+        i = getslice(time, ephem)
+
+        # NOTE: This following gives a correct answer, but it's computationally
+        # inefficient.
+        #
+        # >>> inconstraint = (
+        # >>>    ephem.earth[i].separation(coord) < ephem.earthsize[i] + self.earthoccult
+        # >>> )
+        #
+        # The method below is quicker*, but gives a value that's off by a few
+        # arcseconds. However for a typical LEO spacecraft the Earth moves by
+        # ~4 degrees/minute, and we're calculating ephemerides at 1 minute
+        # intervals, so being a few arcseconds off is not making a real
+        # difference.
+        #
+        # *3x faster than above. If we're calculating earth occultation for
+        # every pixel in an NSIDE=1024 HEALPix map, this means 1s vs 3s on a M1
+        # Mac.
+        inconstraint = (
+            SkyCoord(ephem.earth[i].ra, ephem.earth[i].dec).separation(coord)
+            < ephem.earthsize[i] + self.earthoccult
+        )
+
+        # Return the result as True or False, or an array of True/False
+        return inconstraint[0] if time.isscalar and coord.isscalar else inconstraint

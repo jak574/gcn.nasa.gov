@@ -2,7 +2,7 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from ..base.constraints import SAAPolygonConstraint
+from ..base.constraints import EarthLimbConstraint, SAAPolygonConstraint
 
 """Define constraints for the BurstCube Mission."""
 
@@ -29,3 +29,7 @@ burstcube_saa_constraint = SAAPolygonConstraint(
         (33.900000, -30.0),
     ]
 )
+
+
+# EarthLimbConstraint
+burstcube_earth_constraint = EarthLimbConstraint(earthoccult=0)
