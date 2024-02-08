@@ -5,11 +5,11 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Union
 
-import astropy.units as u  # type: ignore
+import astropy.units as u  # type: ignore[import]
 import numpy as np
-from astropy.coordinates import Angle, SkyCoord  # type: ignore
-from astropy.time import Time  # type: ignore
-from shapely import Polygon, points  # type: ignore
+from astropy.coordinates import Angle, SkyCoord  # type: ignore[import]
+from astropy.time import Time  # type: ignore[import]
+from shapely import Polygon, points  # type: ignore[import]
 
 from .ephem import EphemBase
 
@@ -70,7 +70,6 @@ class SAAPolygonConstraint(Constraint):
     ----------
     polygon
         Shapely Polygon object defining the SAA polygon.
-
     """
 
     polygon: Polygon
@@ -88,7 +87,7 @@ class SAAPolygonConstraint(Constraint):
         Arguments
         ---------
         time
-            The time to calculate the constraint for.
+            The time(s) to calculate the constraint for.
         ephem
             The spacecraft ephemeris, must be precalculated. NOTE: The
             ephemeris can be calculated for a longer time range than the `time`
@@ -169,22 +168,10 @@ class EarthLimbConstraint(Constraint):
         # Find a slice what the part of the ephemeris that we're using
         i = getslice(time, ephem)
 
-        # NOTE: This following gives a correct answer, but it's computationally
-        # inefficient.
-        #
-        # >>> inconstraint = (
-        # >>>    ephem.earth[i].separation(coord) < ephem.earthsize[i] + self.min_angle
-        # >>> )
-        #
-        # The method below is quicker*, but gives a value that's off by a few
-        # arcseconds. However for a typical LEO spacecraft the Earth moves by
-        # ~4 degrees/minute, and we're calculating ephemerides at 1 minute
-        # intervals, so being a few arcseconds off is not making a real
-        # difference.
-        #
-        # *3x faster than above. If we're calculating earth occultation for
-        # every pixel in an NSIDE=1024 HEALPix map, this means 1s vs 3s on a M1
-        # Mac.
+        # Calculate the angular distance between the center of the Earth and
+        # the object. Note that creating the SkyCoord here from ra/dec stored
+        # in the ephemeris `earth` is 3x faster than just doing the separation
+        # directly with `earth`.
         inconstraint = (
             SkyCoord(ephem.earth[i].ra, ephem.earth[i].dec).separation(skycoord)
             < ephem.earthsize[i] + self.min_angle
