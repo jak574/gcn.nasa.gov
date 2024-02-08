@@ -164,7 +164,7 @@ class FOVBase(ACROSSAPIBase):
 
         # Check for Earth occultation
         earth_occultation = self.earth_constraint(
-            coord=skycoord, time=time, ephem=ephem
+            skycoord=skycoord, time=time, ephem=ephem
         )
         return np.logical_not(earth_occultation)
 
