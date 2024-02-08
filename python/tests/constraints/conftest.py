@@ -1,9 +1,17 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 import astropy.units as u  # type: ignore
 import numpy as np
 import pytest
 from across_api.base.schema import TLEEntry  # type: ignore
 from across_api.burstcube.ephem import BurstCubeEphem  # type: ignore
 from across_api.burstcube.tle import BurstCubeTLE  # type: ignore
+from across_api.burstcube.constraints import (
+    burstcube_saa_constraint,
+    burstcube_earth_constraint,
+)  # type: ignore
 from across_api.swift.constraints import (  # type: ignore
     swift_earth_constraint,
     swift_saa_constraint,
@@ -200,4 +208,27 @@ def swift_windows(swift_ephem, swift_insaa, target):
     )
     return make_windows(
         np.logical_not(swift_earth_occult | swift_insaa), swift_ephem.timestamp
+    )
+
+
+@pytest.fixture
+def burstcube_insaa(burstcube_ephem):
+    return burstcube_saa_constraint(
+        time=burstcube_ephem.timestamp, ephem=burstcube_ephem
+    )
+
+
+@pytest.fixture
+def burstcube_saa_windows(burstcube_ephem, burstcube_insaa):
+    return make_windows(burstcube_insaa, burstcube_ephem.timestamp)
+
+
+@pytest.fixture
+def burstcube_windows(burstcube_ephem, burstcube_insaa, target):
+    burstcube_earth_occult = burstcube_earth_constraint(
+        skycoord=target, time=burstcube_ephem.timestamp, ephem=burstcube_ephem
+    )
+    return make_windows(
+        np.logical_not(burstcube_earth_occult | burstcube_insaa),
+        burstcube_ephem.timestamp,
     )

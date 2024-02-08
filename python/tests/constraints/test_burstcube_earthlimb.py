@@ -2,11 +2,12 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
+
 import numpy as np
 
 
-def test_swift_earthconstraint(swiftapi_visibility, swift_windows):
-    errors = np.ravel(abs(swift_windows - swiftapi_visibility))
+def test_burstcube_earthconstraint(burstcube_skyfield_visibility, burstcube_windows):
+    errors = np.ravel(abs(burstcube_windows - burstcube_skyfield_visibility))
     # Check that visibility windows match to within 60 seconds
     assert max(errors) == 60
     # Make sure < 5% of the start/stop times are off by +/-60 seconds
