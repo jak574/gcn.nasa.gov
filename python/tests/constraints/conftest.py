@@ -4,9 +4,28 @@ import pytest
 from across_api.base.schema import TLEEntry  # type: ignore
 from across_api.burstcube.ephem import BurstCubeEphem  # type: ignore
 from across_api.burstcube.tle import BurstCubeTLE  # type: ignore
+from across_api.swift.constraints import (  # type: ignore
+    swift_earth_constraint,
+    swift_saa_constraint,
+)
 from across_api.swift.ephem import SwiftEphem  # type: ignore
 from across_api.swift.tle import SwiftTLE  # type: ignore
+from astropy.coordinates import SkyCoord  # type: ignore
 from astropy.time import Time  # type: ignore
+
+
+def make_windows(insaa, timestamp):
+    """Function to make start and end windows from a boolean array of SAA
+    constraints and array of timestamps"""
+    # Find the start and end of the SAA windows
+    buff = np.concatenate(([False], insaa.tolist(), [False]))
+    begin = np.flatnonzero(~buff[:-1] & buff[1:])
+    end = np.flatnonzero(buff[:-1] & ~buff[1:])
+    indices = np.column_stack((begin, end - 1))
+    windows = timestamp[indices]
+
+    # Return as array of SAAEntry objects
+    return np.array([(win[0].unix, win[1].unix) for win in windows])
 
 
 @pytest.fixture
@@ -129,3 +148,56 @@ def burstcube_skyfield_saa():
         ]
     )
     return skyfield_saa_windows
+
+
+@pytest.fixture
+def target():
+    return SkyCoord(120, 34, unit="deg")
+
+
+@pytest.fixture
+def swiftapi_visibility():
+    # from swifttools.swift_too import VisQuery
+    # target = SkyCoord(120,34,unit='deg')
+    # swift_vis = VisQuery(skycoord=target,begin=Time("2024-01-29"), end=Time("2024-01-30"),hires=True)
+    # swift_windows = np.array([(e.begin.timestamp(),e.end.timestamp())for e in swift_vis.entries])
+    swift_windows = np.array(
+        [
+            [1.70649018e09, 1.70649174e09],
+            [1.70649498e09, 1.70649744e09],
+            [1.70650068e09, 1.70650314e09],
+            [1.70650638e09, 1.70650884e09],
+            [1.70651208e09, 1.70651454e09],
+            [1.70651778e09, 1.70652018e09],
+            [1.70652348e09, 1.70652588e09],
+            [1.70652918e09, 1.70653158e09],
+            [1.70653488e09, 1.70653728e09],
+            [1.70654058e09, 1.70654298e09],
+            [1.70654628e09, 1.70654868e09],
+            [1.70655198e09, 1.70655438e09],
+            [1.70655786e09, 1.70656008e09],
+            [1.70656380e09, 1.70656578e09],
+            [1.70656974e09, 1.70657148e09],
+        ]
+    )
+    return swift_windows
+
+
+@pytest.fixture
+def swift_insaa(swift_ephem):
+    return swift_saa_constraint(time=swift_ephem.timestamp, ephem=swift_ephem)
+
+
+@pytest.fixture
+def swift_saa_entries(swift_ephem, swift_insaa):
+    return make_windows(swift_insaa, swift_ephem.timestamp)
+
+
+@pytest.fixture
+def swift_windows(swift_ephem, swift_insaa, target):
+    swift_earth_occult = swift_earth_constraint(
+        skycoord=target, time=swift_ephem.timestamp, ephem=swift_ephem
+    )
+    return make_windows(
+        np.logical_not(swift_earth_occult | swift_insaa), swift_ephem.timestamp
+    )
