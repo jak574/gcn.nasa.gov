@@ -20,9 +20,9 @@ from across_api.swift.ephem import SwiftEphem  # type: ignore
 from across_api.swift.tle import SwiftTLE  # type: ignore
 from astropy.coordinates import SkyCoord  # type: ignore[import]
 from astropy.time import Time  # type: ignore[import]
+from shapely import Polygon, points  # type: ignore[import]
 from skyfield.api import EarthSatellite, load, utc, wgs84  # type: ignore
 from swifttools.swift_too import SAA, VisQuery  # type: ignore[import]
-from shapely import Polygon, points  # type: ignore[import]
 
 
 def make_windows(insaa, timestamp):
