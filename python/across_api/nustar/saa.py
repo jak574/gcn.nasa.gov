@@ -2,131 +2,56 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
+import astropy.units as u  # type: ignore
 from shapely.geometry import Polygon  # type: ignore
 
-from ..base.config import set_observatory
-from ..base.saa import SAABase, SAAPolygonBase
-from .config import NUSTAR
-from .ephem import Ephem
-from datetime import datetime
-from .ephem import NuSTAREphem
+from ..base.saa import SAABase
+from .ephem import NICEREphem
 
 
-class NuSTARSAAPolygon(SAAPolygonBase):
-    """Class to define the NUSTAR SAA polygon.
-
-    Attributes
-    ----------
-    points : list
-        List of points defining the SAA polygon.
-    saapoly : Polygon
-        Shapely Polygon object defining the SAA polygon.
+class NICERSAAPolygon:
+    """
+    Class to define the NICER SAA polygon.
     """
 
     points: list = [
-        (39.0, -30.0),
-        (36.0, -26.0),
-        (28.0, -21.0),
-        (6.0, -12.0),
-        (-5.0, -6.0),
-        (-21.0, 2.0),
-        (-30.0, 3.0),
+        (33.900000, -30.0),
+        (12.398, -19.876),
+        (-9.103, -9.733),
+        (-30.605, 0.4),
+        (-38.4, 2.0),
         (-45.0, 2.0),
-        (-60.0, -2.0),
-        (-75.0, -7.0),
-        (-83.0, -10.0),
-        (-87.0, -16.0),
-        (-86.0, -23.0),
-        (-83.0, -30.0),
+        (-65.0, -1.0),
+        (-84.0, -6.155),
+        (-89.2, -8.880),
+        (-94.3, -14.220),
+        (-94.3, -18.404),
+        (-84.48631, -31.84889),
+        (-86.100000, -30.0),
+        (-72.34921, -43.98599),
+        (-54.5587, -52.5815),
+        (-28.1917, -53.6258),
+        (-0.2095279, -46.88834),
+        (28.8026, -34.0359),
+        (33.900000, -30.0),
     ]
 
     saapoly: Polygon = Polygon(points)
 
 
-@set_observatory(NUSTAR)
-class NuSTARSAA(SAABase):
-<<<<<<< HEAD
-    """Class to calculate NuSTAR SAA entries.
-
-    Parameters
-    ----------
-    begin : datetime
-        Start time of SAA search
-    end : datetime
-        End time of SAA search
-    ephem : Optional[Ephem]
-        Ephem object to use for SAA calculations
-    stepsize : int
-        Step size in seconds for SAA calculations
-
-    Attributes
-    ----------
-    entries : list
-        List of SAA entries
-    status : JobInfo
-        Status of SAA query
-=======
+class NICERSAA(SAABase):
     """
-    Class to calculate NUSTAR SAA passages.
->>>>>>> 0628e39 (Fix class name)
+    Class to calculate NICER SAA passages.
     """
 
-    saa = NuSTARSAAPolygon()
-    ephemclass = NuSTAREphem
+    saa = NICERSAAPolygon()
+    ephemclass = NICEREphem
 
-    # Internal things
-    saa = NuSTARSAAPolygon()
-    ephem: Ephem
-    begin: datetime
-    end: datetime
-    stepsize: int
-
-    def __init__(
-        self,
-        begin: datetime,
-        end: datetime,
-        ephem: Optional[Ephem] = None,
-        stepsize: int = 60,
-    ):
-        # Attributes
-
-        self._insaacons: Optional[list] = None
-        self.entries = None
-
-        # Parameters
-        self.begin = begin
-        self.end = end
+    def __init__(self, begin, end, ephem=None, stepsize=60 * u.s):
+        """
+        Initialize the SAA class. Set up the Ephemeris if it's not given.
+        """
+        # Need to instantiate the ephem class here or else th
         if ephem is None:
-            self.ephem = Ephem(begin=begin, end=end, stepsize=stepsize)
-            self.stepsize = stepsize
-        else:
-            self.ephem = ephem
-            # Make sure stepsize matches supplied ephemeris
-            self.stepsize = ephem.stepsize
-
-        # If request validates, query
-        if self.validate_get():
-            self.get()
-
-    @classmethod
-    def insaa(cls, dttime: datetime) -> bool:
-        """
-        For a given datetime, are we in the SAA?
-
-        Parameters
-        ----------
-        dttime : datetime
-            Time at which to calculate if we're in SAA
-
-        Returns
-        -------
-        bool
-            True if we're in the SAA, False otherwise
-        """
-        # Calculate an ephemeris for the exact time requested
-        ephem = Ephem(begin=dttime, end=dttime)  # type: ignore
-        return cls.saa.insaa(ephem.longitude[0], ephem.latitude[0])
-
-
-# Class alias
-SAA = NuSTARSAA
+            ephem = NICEREphem(begin, end, stepsize)
+        super().__init__(begin, end, ephem, stepsize)
