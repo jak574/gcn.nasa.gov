@@ -3,6 +3,7 @@
 # All Rights Reserved.
 
 from ..base.constraints import EarthLimbConstraint, SAAPolygonConstraint
+import astropy.units as u  # type: ignore
 
 """Define constraints for the BurstCube Mission."""
 
@@ -32,4 +33,4 @@ burstcube_saa_constraint = SAAPolygonConstraint(
 
 
 # EarthLimbConstraint
-burstcube_earth_constraint = EarthLimbConstraint(earthoccult=0)
+burstcube_earth_constraint = EarthLimbConstraint(min_angle=0 * u.deg)

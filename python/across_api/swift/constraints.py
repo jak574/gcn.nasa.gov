@@ -28,4 +28,4 @@ swift_saa_constraint = SAAPolygonConstraint(
     ]
 )
 
-swift_earth_constraint = EarthLimbConstraint(earthoccult=33 * u.deg)
+swift_earth_constraint = EarthLimbConstraint(min_angle=33 * u.deg)
