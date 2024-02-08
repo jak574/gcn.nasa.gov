@@ -8,10 +8,10 @@ import pytest
 from across_api.base.schema import TLEEntry  # type: ignore
 from across_api.burstcube.ephem import BurstCubeEphem  # type: ignore
 from across_api.burstcube.tle import BurstCubeTLE  # type: ignore
-from across_api.burstcube.constraints import (
+from across_api.burstcube.constraints import (  # type: ignore
     burstcube_saa_constraint,
     burstcube_earth_constraint,
-)  # type: ignore
+)
 from across_api.swift.constraints import (  # type: ignore
     swift_earth_constraint,
     swift_saa_constraint,
@@ -224,11 +224,65 @@ def burstcube_saa_windows(burstcube_ephem, burstcube_insaa):
 
 
 @pytest.fixture
-def burstcube_windows(burstcube_ephem, burstcube_insaa, target):
+def burstcube_windows(burstcube_ephem, target):
     burstcube_earth_occult = burstcube_earth_constraint(
         skycoord=target, time=burstcube_ephem.timestamp, ephem=burstcube_ephem
     )
     return make_windows(
-        np.logical_not(burstcube_earth_occult | burstcube_insaa),
+        np.logical_not(burstcube_earth_occult),
         burstcube_ephem.timestamp,
+    )
+
+
+@pytest.fixture
+def burstcube_skyfield_windows():
+    # from skyfield.api import load, wgs84, EarthSatellite, utc
+    # import numpy as np
+    # from datetime import datetime, timedelta
+    # import astropy.units as u
+    # from astropy.coordinates import SkyCoord
+    # from astropy.time import Time
+
+    # satname = "ISS (ZARYA)"
+    # tle1 = "1 25544U 98067A   24003.59801929  .00015877  00000-0  28516-3 0  9995"
+    # tle2 = "2 25544  51.6422  55.8239 0003397 348.6159 108.6885 15.50043818432877"
+
+    # # Compute GCRS position using Skyfield library
+
+    # timestamps = [datetime(2024,1,29,tzinfo=utc)+timedelta(seconds=60*i) for i in range(1441)]
+
+    # ts = load.timescale()
+    # satellite = EarthSatellite(tle1, tle2, satname, ts)
+    # bodies = load("de421.bsp")
+    # nowts = ts.from_datetimes(timestamps)
+    # earthpos = (bodies["Earth"] + satellite).at(nowts).observe(bodies["Earth"])
+    # radec = earthpos.radec()
+    # skyfield_earthra = radec[0]._degrees * u.deg
+    # skyfield_earthdec = radec[1].degrees * u.deg
+    # skyfield_earthdec
+
+    # target = SkyCoord(120, 34, unit="deg")
+    # earth = SkyCoord(skyfield_earthra, skyfield_earthdec)
+    # inoccult = target.separation(earth).value < 70
+    # make_windows(inoccult,Time(timestamps))
+
+    return np.array(
+        [
+            [1.70648640e09, 1.70648844e09],
+            [1.70649060e09, 1.70649402e09],
+            [1.70649612e09, 1.70649960e09],
+            [1.70650170e09, 1.70650512e09],
+            [1.70650728e09, 1.70651070e09],
+            [1.70651286e09, 1.70651628e09],
+            [1.70651844e09, 1.70652186e09],
+            [1.70652402e09, 1.70652744e09],
+            [1.70652954e09, 1.70653302e09],
+            [1.70653512e09, 1.70653860e09],
+            [1.70654070e09, 1.70654412e09],
+            [1.70654628e09, 1.70654970e09],
+            [1.70655186e09, 1.70655528e09],
+            [1.70655738e09, 1.70656086e09],
+            [1.70656296e09, 1.70656644e09],
+            [1.70656854e09, 1.70657202e09],
+        ]
     )
