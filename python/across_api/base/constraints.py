@@ -2,22 +2,13 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-<<<<<<< HEAD
 from typing import Union
-=======
-from abc import ABC, abstractmethod
-from typing import Optional, Union
->>>>>>> aa70134 (Only return a scalar value if both time and coordinates are scalar)
 
 import astropy.units as u  # type: ignore[import]
 import numpy as np
 from astropy.coordinates import Angle, SkyCoord  # type: ignore[import]
 from astropy.time import Time  # type: ignore[import]
 from shapely import Polygon, points  # type: ignore[import]
-<<<<<<< HEAD
-=======
-
->>>>>>> aa70134 (Only return a scalar value if both time and coordinates are scalar)
 from .ephem import EphemBase
 
 
@@ -131,11 +122,7 @@ class EarthLimbConstraint:
         self,
         time: Time,
         ephem: EphemBase,
-<<<<<<< HEAD
         skycoord: SkyCoord,
-=======
-        skycoord: Optional[SkyCoord] = None,
->>>>>>> aa70134 (Only return a scalar value if both time and coordinates are scalar)
     ) -> Union[bool, np.ndarray]:
         """
         Check for a given time, ephemeris and coordinate if positions given are
@@ -163,7 +150,6 @@ class EarthLimbConstraint:
         """
         # Find a slice what the part of the ephemeris that we're using
         i = get_slice(time, ephem)
-
 
         # Calculate the angular distance between the center of the Earth and
         # the object. Note that creating the SkyCoord here from ra/dec stored
