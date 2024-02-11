@@ -13,6 +13,10 @@ anyio==3.7.1
 architect-functions==1.0.0
     # via -r requirements.in
 astropy==6.0.0
+    # via
+    #   -r requirements.in
+    #   astropy-healpix
+astropy-healpix==1.0.2
     # via -r requirements.in
 astropy-iers-data==0.2024.2.5.0.30.52
     # via astropy
@@ -58,6 +62,7 @@ mangum==0.17.0
 numpy==1.26.2
     # via
     #   astropy
+    #   astropy-healpix
     #   pyerfa
     #   shapely
 packaging==23.2
