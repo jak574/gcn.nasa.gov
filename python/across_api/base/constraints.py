@@ -161,7 +161,6 @@ class EarthLimbConstraint:
         )
 
         # Return the result as True or False, or an array of True/False
-
         return (
             in_constraint[0] if time.isscalar and skycoord.isscalar else in_constraint
         )
