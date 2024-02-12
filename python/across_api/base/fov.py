@@ -86,7 +86,7 @@ class FOVBase(ACROSSAPIBase):
     ephem: EphemBase
     earth_constraint: EarthLimbConstraint
 
-    def probability_infov(
+    def probability_in_fov(
         self,
         time: Time,
         ephem: EphemBase,
@@ -114,24 +114,24 @@ class FOVBase(ACROSSAPIBase):
 
         """
         # For a point source
-        if skycoord is not None and error_radius is None:
-            infov = self.infov(skycoord, time, ephem)
-            return 1.0 if infov else 0.0
+        if skycoord is not None and (error_radius is None or error_radius == 0.0):
+            in_fov = self.in_fov(skycoord, time, ephem)
+            return 1.0 if in_fov else 0.0
         # For a circular error region
         if skycoord is not None and error_radius is not None:
-            return self.infov_circular_error(
+            return self.in_fov_circular_error(
                 skycoord=skycoord, error_radius=error_radius, time=time, ephem=ephem
             )
         # For a HEALPix map
         elif healpix_loc is not None:
-            return self.infov_healpix_map(
+            return self.in_fov_healpix_map(
                 healpix_loc=healpix_loc, time=time, ephem=ephem
             )
 
         # We should never get here
         raise AssertionError("No valid arguments provided")
 
-    def infov(
+    def in_fov(
         self,
         skycoord: SkyCoord,
         time: Time,
@@ -168,7 +168,7 @@ class FOVBase(ACROSSAPIBase):
         )
         return np.logical_not(earth_occultation)
 
-    def infov_circular_error(
+    def in_fov_circular_error(
         self,
         skycoord: SkyCoord,
         error_radius: u.Quantity,
@@ -180,10 +180,10 @@ class FOVBase(ACROSSAPIBase):
         Calculate the probability of a celestial object with a circular error
         region being inside the FOV defined by the given parameters. This works
         by creating a HEALPix map of the probability density distribution, and
-        then using the `infov_healpix_map` method to calculate the amount of
+        then using the `in_fov_healpix_map` method to calculate the amount of
         probability inside the FOV.
 
-        The FOV definition is based on the `infov` method, which checks if a
+        The FOV definition is based on the `in_fov` method, which checks if a
         given coordinate is inside the FOV and not Earth occulted.
 
         Parameters
@@ -212,13 +212,13 @@ class FOVBase(ACROSSAPIBase):
             skycoord=skycoord, error_radius=error_radius, nside=nside
         )
 
-        return self.infov_healpix_map(
+        return self.in_fov_healpix_map(
             healpix_loc=prob,
             time=time,
             ephem=ephem,
         )
 
-    def infov_healpix_map(
+    def in_fov_healpix_map(
         self,
         healpix_loc: FITS_rec,
         time: Time,
@@ -229,7 +229,7 @@ class FOVBase(ACROSSAPIBase):
         Calculates the amount of probability inside the field of view (FOV)
         defined by the given parameters. This works by calculating a SkyCoord
         containing every non-zero probability pixel, uses the
-        `infov` method to check which pixels are inside the FOV,
+        `in_fov` method to check which pixels are inside the FOV,
         and then finding the integrated probability of those pixels.
 
         Note: This method makes no attempt to deal with pixels that are only
@@ -285,7 +285,7 @@ class FOVBase(ACROSSAPIBase):
 
         # Calculate pixel indicies of the all the regions inside of the FOV
         visible_pixels = nonzero_prob_pixels[
-            self.infov(skycoord=skycoord, time=time, ephem=ephem)
+            self.in_fov(skycoord=skycoord, time=time, ephem=ephem)
         ]
 
         # Calculate the amount of probability inside the FOV
