@@ -4,11 +4,10 @@
 
 
 from datetime import datetime
-from typing import Annotated, Any, List, Optional, Union
-
-import astropy.units as u  # type: ignore
-from arc import tables  # type: ignore[import]
+import json
+from typing import Annotated, Any, Dict, List, Optional, Union
 from astropy.coordinates import Latitude, Longitude  # type: ignore[import]
+import astropy.units as u  # type: ignore
 from astropy.time import Time  # type: ignore
 from pydantic import (
     BaseModel,
@@ -20,6 +19,8 @@ from pydantic import (
     computed_field,
     model_validator,
 )
+
+from .database import dynamodb_table
 
 # Define a Pydantic type for astropy Time objects, which will be serialized as
 # a naive UTC datetime object, or a string in ISO format for JSON.
@@ -77,6 +78,9 @@ AstropyAngle = Annotated[
         mode="validation",
     ),
 ]
+
+# Define a pydantic type for a dictionary that will be serialized as a JSON
+JsonStr = Annotated[Dict, PlainSerializer(lambda x: json.dumps(x), return_type=str)]
 
 
 class BaseSchema(BaseModel):
@@ -172,6 +176,98 @@ class OptionalPositionSchema(BaseSchema):
         return data
 
 
+class OptionalDateRangeSchema(BaseSchema):
+    """Schema that defines date range, which is optional
+
+    Parameters
+    ----------
+    begin
+        The beginning date of the range, by default None
+    end
+        The end date of the range, by default None
+
+    Methods
+    -------
+    check_dates(data: Any) -> Any
+        Validates the date range and ensures that the begin and end dates are set correctly.
+
+    """
+
+    begin: Optional[AstropyTime] = None
+    end: Optional[AstropyTime] = None
+
+    @model_validator(mode="after")
+    @classmethod
+    def check_dates(cls, data: Any) -> Any:
+        """Validates the date range and ensures that the begin and end dates are set correctly.
+
+        Parameters
+        ----------
+        data
+            The data to be validated.
+
+        Returns
+        -------
+        Any
+            The validated data.
+
+        Raises
+        ------
+        AssertionError
+            If the begin and end dates are not both set or both not set.
+            If the end date is before the begin date.
+
+        """
+        if data.begin is None or data.end is None:
+            assert (
+                data.begin == data.end
+            ), "Begin/End should both be set, or both not set"
+        if data.begin != data.end:
+            assert data.begin <= data.end, "End date should not be before begin"
+
+        return data
+
+
+class OptionalPositionSchema(BaseSchema):
+    """
+    Schema for representing position information with an error radius.
+
+    Attributes
+    ----------
+    error
+        The error associated with the position. Defaults to None.
+    """
+
+    ra: Optional[AstropyAngle] = Field(ge=0 * u.deg, lt=360 * u.deg, default=None)
+    dec: Optional[AstropyAngle] = Field(ge=-90 * u.deg, le=90 * u.deg, default=None)
+    error: Optional[AstropyAngle] = None
+
+    @model_validator(mode="after")
+    @classmethod
+    def check_ra_dec(cls, data: Any) -> Any:
+        """Validates that RA and Dec are both set or both not set.
+
+        Parameters
+        ----------
+        data
+            The data to be validated.
+
+        Returns
+        -------
+        Any
+            The validated data.
+
+        Raises
+        ------
+        AssertionError
+            If RA and Dec are not both set or both not set.
+
+        """
+        if data.ra is None or data.dec is None:
+            assert data.ra == data.dec, "RA/Dec should both be set, or both not set"
+        return data
+
+
 class TLEGetSchema(BaseSchema):
     epoch: AstropyTime
 
@@ -248,7 +344,7 @@ class TLEEntry(BaseSchema):
         -------
             A list of TLEEntry objects between the specified epochs.
         """
-        table = tables.table(cls.__tablename__)
+        table = dynamodb_table(cls.__tablename__)
 
         # Query the table for TLEs between the two epochs
         response = table.query(
@@ -265,7 +361,7 @@ class TLEEntry(BaseSchema):
 
     def write(self) -> None:
         """Write the TLE entry to the database."""
-        table = tables.table(self.__tablename__)
+        table = dynamodb_table(self.__tablename__)
         table.put_item(Item=self.model_dump(mode="json"))
 
 

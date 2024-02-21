@@ -2,7 +2,9 @@ boto3
 mypy
 ruff
 hypothesis
+moto
 pytest
+pytest-mock
 types-requests
 types-cachetools
 types-python-jose
