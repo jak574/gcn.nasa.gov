@@ -33,8 +33,8 @@ class BurstCubeTOORequests(ACROSSAPIBase):
         End time of plan search
     limit
         Limit number of searches
-    length
-        Length of time to search from now
+    duration
+        Duration of time to search from now
 
     Attributes
     ----------
@@ -58,14 +58,14 @@ class BurstCubeTOORequests(ACROSSAPIBase):
         self,
         begin: Optional[Time] = None,
         end: Optional[Time] = None,
-        length: Optional[u.Quantity] = None,
+        duration: Optional[u.Quantity] = None,
         limit: Optional[int] = None,
     ):
         # Default parameters
         self.limit = limit
         self.begin = begin
         self.end = end
-        self.length = length
+        self.duration = duration
         # Attributes
         self.entries: list = []
 
@@ -87,9 +87,9 @@ class BurstCubeTOORequests(ACROSSAPIBase):
             return False
         table = tables.table(BurstCubeTOOModel.__tablename__)
 
-        if self.length is not None:
+        if self.duration is not None:
             self.begin = Time.now()
-            self.end = self.begin - self.length
+            self.end = self.begin - self.duration
 
         # Search for events that overlap a given date range
         if self.begin is not None and self.end is not None:

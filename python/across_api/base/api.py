@@ -101,7 +101,7 @@ async def error_radius(
             description="Error radius in degrees.",
         ),
     ] = None,
-) -> Optional[float]:
+) -> Optional[u.Quantity[u.deg]]:
     if error_radius is None:
         return None
     return error_radius * u.deg
