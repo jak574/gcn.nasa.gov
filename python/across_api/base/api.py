@@ -183,7 +183,7 @@ async def trigger_time(
             description="Time of trigger in UTC or ISO format.",
         ),
     ],
-) -> Optional[datetime]:
+) -> Optional[Time]:
     return Time(trigger_time)
 
 
