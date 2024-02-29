@@ -27,7 +27,6 @@ app = FastAPI(
 )
 
 
-
 # Depends functions for FastAPI calls.
 async def optional_daterange(
     begin: Annotated[
@@ -65,9 +64,9 @@ async def optional_duration(
             title="Duration",
         ),
     ] = None,
-) -> Optional[u.Quantity]:
+) -> Optional[u.Quantity[u.day]]:
     """
-    Helper function to convert begin and end to datetime objects.
+    Helper function to convert a float duration in days to a u.Quantity
     """
     if duration is None:
         return None
@@ -120,7 +119,7 @@ async def exposure(
             description="Exposure time in seconds.",
         ),
     ] = 200,
-) -> u.Quantity:
+) -> u.Quantity[u.s]:
     return exposure * u.s
 
 
@@ -137,7 +136,7 @@ async def offset(
             description="Offset start of dump window from T0 by this amount (seconds).",
         ),
     ] = -50,
-) -> u.Quantity:
+) -> u.Quantity[u.s]:
     return offset * u.s
 
 
