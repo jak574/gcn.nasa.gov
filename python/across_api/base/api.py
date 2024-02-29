@@ -144,24 +144,6 @@ async def offset(
 OffsetDep = Annotated[float, Depends(offset)]
 
 
-IdDep = Annotated[str, Path(description="TOO ID string")]
-
-
-async def trigger_time(
-    trigger_time: Annotated[
-        datetime,
-        Query(
-            title="Trigger Time",
-            description="Time of trigger in UTC or ISO format.",
-        ),
-    ],
-) -> Optional[datetime]:
-    return Time(trigger_time)
-
-
-TriggerTimeDep = Annotated[datetime, Depends(trigger_time)]
-
-
 async def optional_ra_dec(
     ra: Annotated[
         Optional[float],
@@ -188,3 +170,21 @@ async def optional_ra_dec(
 
 
 OptionalRaDecDep = Annotated[dict, Depends(optional_ra_dec)]
+
+
+IdDep = Annotated[str, Path(description="TOO ID string")]
+
+
+async def trigger_time(
+    trigger_time: Annotated[
+        datetime,
+        Query(
+            title="Trigger Time",
+            description="Time of trigger in UTC or ISO format.",
+        ),
+    ],
+) -> Optional[datetime]:
+    return Time(trigger_time)
+
+
+TriggerTimeDep = Annotated[datetime, Depends(trigger_time)]
