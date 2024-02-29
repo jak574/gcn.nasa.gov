@@ -38,6 +38,8 @@ from .schema import (
     TOOStatus,
 )
 
+from boto3.dynamodb.conditions import Key  # type: ignore
+
 
 @dataclass
 class BurstCubeTOO(ACROSSAPIBase):
