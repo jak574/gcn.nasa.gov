@@ -25,7 +25,6 @@ app = FastAPI(
     root_path="/labs/api/v1",
 )
 
-# FastAPI Depends definitions
 
 
 # Depends functions for FastAPI calls.
