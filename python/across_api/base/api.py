@@ -6,6 +6,7 @@
 Base API definitions for ACROSS API. This module is imported by all other API
 modules.
 """
+
 from astropy.time import Time  # type: ignore[import]
 from datetime import datetime
 from typing import Annotated, Optional
@@ -56,24 +57,24 @@ OptionalDateRangeDep = Annotated[dict, Depends(optional_daterange)]
 
 
 # Depends functions for FastAPI calls.
-async def optional_length(
-    length: Annotated[
+async def optional_duration(
+    duration: Annotated[
         Optional[float],
         Query(
-            description="Length of time (days).",
-            title="Length",
+            description="Duration of time (days).",
+            title="Duration",
         ),
     ] = None,
 ) -> Optional[u.Quantity]:
     """
     Helper function to convert begin and end to datetime objects.
     """
-    if length is None:
+    if duration is None:
         return None
-    return length * u.day
+    return duration * u.day
 
 
-OptionalLengthDep = Annotated[dict, Depends(optional_length)]
+OptionalDurationDep = Annotated[dict, Depends(optional_duration)]
 
 
 async def optional_limit(
