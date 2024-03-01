@@ -2,9 +2,9 @@ boto3
 mypy
 ruff
 hypothesis
-moto
 pytest
 pytest-mock
+pytest-dynamodb
 types-requests
 types-cachetools
 types-python-jose

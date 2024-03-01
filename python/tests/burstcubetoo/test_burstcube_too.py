@@ -2,13 +2,20 @@ import astropy.units as u  # type: ignore[import]
 from across_api.burstcube.schema import TOOReason  # type: ignore[import]
 from across_api.burstcube.toorequest import BurstCubeTOO  # type: ignore[import]
 from astropy.time.core import Time, TimeDelta  # type: ignore[import]
-from moto import mock_aws
 
 
-@mock_aws
+# @mock_aws
 def test_burstcube_too_crud(
-    username, burstcube_too, create_tle_table, create_too_table, mock_read_tle_db
+    username,
+    burstcube_too,
+    create_tle_table,
+    create_too_table,
+    mock_read_tle_db,
+    mock_toorequest_table,
 ):
+    from across_api.burstcube.toorequest import dynamodb_table
+
+    assert dynamodb_table == mock_toorequest_table
     assert burstcube_too.post() is True
     assert burstcube_too.id is not None
 
@@ -50,7 +57,11 @@ def test_burstcube_too_crud(
 
 
 def test_burstcube_old_too(
-    burstcube_old_too, create_tle_table, create_too_table, mock_read_tle_db
+    burstcube_old_too,
+    create_tle_table,
+    create_too_table,
+    mock_read_tle_db,
+    mock_toorequest_table,
 ):
     assert burstcube_old_too.post() is True
     assert burstcube_old_too.trigger_time < Time.now() - TimeDelta(48 * u.hr)
@@ -60,7 +71,11 @@ def test_burstcube_old_too(
 
 
 def test_burstcube_too_double_post(
-    burstcube_too, create_tle_table, create_too_table, mock_read_tle_db
+    burstcube_too,
+    create_tle_table,
+    create_too_table,
+    mock_read_tle_db,
+    mock_toorequest_table,
 ):
     assert burstcube_too.post() is True
     try:
