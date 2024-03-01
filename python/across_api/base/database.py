@@ -11,4 +11,6 @@ def dynamodb_table(tablename) -> Any:
         return arc.tables.table(tablename)
     else:
         session = boto3.Session()
-        return session.resource("dynamodb", region_name="us-east-1").Table(tablename)
+        return session.resource(
+            "dynamodb", region_name="us-east-1", endpoint_url="http://localhost:5555"
+        ).Table(f"remix-gcn-staging-{tablename}")

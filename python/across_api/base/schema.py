@@ -4,8 +4,7 @@
 
 
 from datetime import datetime
-import json
-from typing import Annotated, Any, Dict, List, Optional, Union
+from typing import Annotated, Any, List, Optional, Union
 from astropy.coordinates import Latitude, Longitude  # type: ignore[import]
 import astropy.units as u  # type: ignore
 from astropy.time import Time  # type: ignore
@@ -78,9 +77,6 @@ AstropyAngle = Annotated[
         mode="validation",
     ),
 ]
-
-# Define a pydantic type for a dictionary that will be serialized as a JSON
-JsonStr = Annotated[Dict, PlainSerializer(lambda x: json.dumps(x), return_type=str)]
 
 
 class BaseSchema(BaseModel):
@@ -240,7 +236,7 @@ class OptionalPositionSchema(BaseSchema):
 
     ra: Optional[AstropyAngle] = Field(ge=0 * u.deg, lt=360 * u.deg, default=None)
     dec: Optional[AstropyAngle] = Field(ge=-90 * u.deg, le=90 * u.deg, default=None)
-    error: Optional[AstropyAngle] = None
+    error_radius: Optional[AstropyAngle] = None
 
     @model_validator(mode="after")
     @classmethod

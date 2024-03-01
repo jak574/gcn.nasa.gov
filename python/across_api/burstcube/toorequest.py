@@ -7,6 +7,8 @@ import json
 from dataclasses import dataclass
 from decimal import Decimal  # type: ignore[import]
 from functools import cached_property
+import hashlib
+import json
 from typing import Optional, Union
 
 import astropy.units as u  # type: ignore[import]
@@ -201,6 +203,7 @@ class BurstCubeTOO(ACROSSAPIBase):
             raise HTTPException(404, "BurstCubeTOO not found.")
 
         # Reconstruct the TOO as it exists in the database
+        print(response["Item"])
         old_too = BurstCubeTOO(**response["Item"])
 
         # FIXME: Some validation as to whether the user is allowed to update

@@ -96,12 +96,6 @@ class BurstCubeTriggerInfo(BaseSchema):
 
     model_config = ConfigDict(extra="allow")
 
-    @model_validator(mode="before")
-    def convert_json_string_to_dict(cls, data):
-        if isinstance(data, str):
-            return json.loads(data)
-        return data
-
 
 class BurstCubeTOOSchema(OptionalPositionSchema):
     """
