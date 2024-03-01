@@ -1,6 +1,7 @@
 import astropy.units as u  # type: ignore[import]
 from across_api.burstcube.schema import TOOReason  # type: ignore[import]
 from across_api.burstcube.toorequest import BurstCubeTOO  # type: ignore[import]
+from across_api.burstcube.toorequest import BurstCubeTOORequests  # type: ignore[import]
 from astropy.time.core import Time, TimeDelta  # type: ignore[import]
 
 
@@ -83,3 +84,57 @@ def test_burstcube_too_double_post(
     except Exception as e:
         assert e.status_code == 409
         assert e.detail == "BurstCubeTOO already exists."
+
+
+def test_burstcube_toorequests(
+    mock_toorequest_table,
+    create_tle_table,
+    create_too_table,
+    mock_read_tle_db,
+    now,
+    trigger_info,
+):
+    # Submit three TOOs to the API
+    now = Time("2024-03-01 16:40:00")
+    newtoos = []
+    for i in range(3):
+        newtoo = BurstCubeTOO(
+            trigger_time=now - TimeDelta(i * u.hr),
+            trigger_info=trigger_info,
+            username="testuser",
+        )
+        newtoo.post()
+        newtoos.append(newtoo)
+
+    # Check that BurstCube TOORequests returns the same number of TOOs as were
+    # submitted, and that the contents match
+
+    toos = BurstCubeTOORequests()
+    toos.get()
+    assert len(toos) == len(newtoos)
+    assert toos[0].model_dump_json() == newtoos[0].schema.model_dump_json()
+    assert toos[1].reject_reason == newtoos[1].reject_reason
+    assert toos[1].model_dump_json() == newtoos[1].schema.model_dump_json()
+
+    assert toos[2].model_dump_json() == newtoos[2].schema.model_dump_json()
+
+    # Check the limit parameter
+    toos = BurstCubeTOORequests(limit=1)
+    toos.get()
+
+    assert len(toos) == 1
+
+    # Check the duration parameter by fetching only TOOs that arrived in the
+    # last hour, this should be three. Then check the hour before, should be
+    # zero
+    toos = BurstCubeTOORequests(duration=1 * u.hr)
+    toos.get()
+    assert len(toos) == 3
+
+    # Use begin and end to fetch the TOOs from the hour before the previous one
+    # checked, should be no TOOs.
+    toos = BurstCubeTOORequests(
+        begin=Time.now() - TimeDelta(2 * u.hr), end=Time.now() - TimeDelta(2 * u.hr)
+    )
+    toos.get()
+    assert len(toos) == 0

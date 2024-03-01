@@ -1,11 +1,13 @@
 from unittest.mock import Mock
 
 import astropy.units as u  # type: ignore[import]
-
 import pytest
 from across_api.base.schema import TLEEntry  # type: ignore[import]
-from across_api.burstcube.schema import BurstCubeTOOModel  # type: ignore[import]
-from across_api.burstcube.toorequest import BurstCubeTOO, BurstCubeTriggerInfo  # type: ignore[import]
+from across_api.burstcube.schema import BurstCubeTOOSchema  # type: ignore[import]
+from across_api.burstcube.toorequest import (  # type: ignore[import]
+    BurstCubeTOO,
+    BurstCubeTriggerInfo,
+)
 from astropy.time import Time  # type: ignore
 from astropy.time.core import TimeDelta  # type: ignore[import]
 
@@ -48,7 +50,7 @@ def create_too_table(dynamodb):
         AttributeDefinitions=[
             {"AttributeName": "id", "AttributeType": "S"},
         ],
-        TableName=BurstCubeTOOModel.__tablename__,
+        TableName=BurstCubeTOOSchema.__tablename__,
         KeySchema=[
             {"AttributeName": "id", "KeyType": "HASH"},
         ],
@@ -109,3 +111,25 @@ def burstcube_old_too(username, trigger_info):
         username=username,
     )
     yield too
+
+
+@pytest.fixture
+def burstcube_three_toos(
+    create_too_table, create_tle_table, dynamodb, now, trigger_info
+):
+    """Create 3 BurstCubeTOO objects with different statuses."""
+    now = Time.now()
+    trigger_info = BurstCubeTriggerInfo(
+        trigger_mission="BurstCube",
+        trigger_type="GRB",
+    )
+    toos = []
+    for i in range(3):
+        too = BurstCubeTOO(
+            trigger_time=now - TimeDelta(i * u.hr),
+            trigger_info=trigger_info,
+            username="testuser",
+        )
+        too.post()
+        toos.append(too)
+    yield toos
