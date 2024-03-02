@@ -136,8 +136,10 @@ class BurstCubeTOO(ACROSSAPIBase):
 
         # Fetch BurstCubeTOO from database
         try:
-            async with dynamodb_resource() as dynamodb:
-                table = dynamodb.Table(table_prefix + BurstCubeTOOSchema.__tablename__)
+            async with await dynamodb_resource() as dynamodb:
+                table = await dynamodb.Table(
+                    table_prefix + BurstCubeTOOSchema.__tablename__
+                )
                 response = await table.get_item(Key={"id": self.id})
         except botocore.exceptions.ClientError as e:
             raise HTTPException(500, f"Error fetching BurstCubeTOO: {e}")
@@ -173,10 +175,9 @@ class BurstCubeTOO(ACROSSAPIBase):
                 json_too = json.loads(
                     self.schema.model_dump_json(), parse_float=Decimal
                 )
-                # Add fixed partition key for the GSI
                 json_too["gsipk"] = 1
-                async with dynamodb_resource() as dynamodb:
-                    table = dynamodb.Table(
+                async with await dynamodb_resource() as dynamodb:
+                    table = await dynamodb.Table(
                         table_prefix + BurstCubeTOOSchema.__tablename__
                     )
                     await table.put_item(Item=json_too)
@@ -196,8 +197,10 @@ class BurstCubeTOO(ACROSSAPIBase):
             return False
 
         # Check if this BurstCubeTOO exists
-        async with dynamodb_resource() as dynamodb:
-            table = dynamodb.Table(table_prefix + BurstCubeTOOSchema.__tablename__)
+        async with await dynamodb_resource() as dynamodb:
+            table = await dynamodb.Table(
+                table_prefix + BurstCubeTOOSchema.__tablename__
+            )
             response = await table.get_item(Key={"id": self.id})
 
             # Check if the TOO exists
@@ -325,8 +328,10 @@ class BurstCubeTOO(ACROSSAPIBase):
         # Check if this BurstCubeTOO exists. As the id is just a hash of the
         # trigger_time, exposure and offset, then repeated requests for values
         # that match this will be caught.
-        async with dynamodb_resource() as dynamodb:
-            table = dynamodb.Table(table_prefix + BurstCubeTOOSchema.__tablename__)
+        async with await dynamodb_resource() as dynamodb:
+            table = await dynamodb.Table(
+                table_prefix + BurstCubeTOOSchema.__tablename__
+            )
             try:
                 response = await table.get_item(Key={"id": self.id})
                 if response.get("Item"):
@@ -404,8 +409,10 @@ class BurstCubeTOORequests(ACROSSAPIBase):
         # Validate query
         if not self.validate_get():
             return False
-        async with dynamodb_resource() as dynamodb:
-            table = dynamodb.Table(table_prefix + BurstCubeTOOSchema.__tablename__)
+        async with await dynamodb_resource() as dynamodb:
+            table = await dynamodb.Table(
+                table_prefix + BurstCubeTOOSchema.__tablename__
+            )
 
             if self.duration is not None:
                 self.end = Time.now()
