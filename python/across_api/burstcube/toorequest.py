@@ -136,7 +136,7 @@ class BurstCubeTOO(ACROSSAPIBase):
 
         # Fetch BurstCubeTOO from database
         try:
-            async with await dynamodb_resource() as dynamodb:
+            async with dynamodb_resource() as dynamodb:
                 table = await dynamodb.Table(
                     table_prefix + BurstCubeTOOSchema.__tablename__
                 )
@@ -176,7 +176,7 @@ class BurstCubeTOO(ACROSSAPIBase):
                     self.schema.model_dump_json(), parse_float=Decimal
                 )
                 json_too["gsipk"] = 1
-                async with await dynamodb_resource() as dynamodb:
+                async with dynamodb_resource() as dynamodb:
                     table = await dynamodb.Table(
                         table_prefix + BurstCubeTOOSchema.__tablename__
                     )
@@ -197,7 +197,7 @@ class BurstCubeTOO(ACROSSAPIBase):
             return False
 
         # Check if this BurstCubeTOO exists
-        async with await dynamodb_resource() as dynamodb:
+        async with dynamodb_resource() as dynamodb:
             table = await dynamodb.Table(
                 table_prefix + BurstCubeTOOSchema.__tablename__
             )
@@ -329,7 +329,7 @@ class BurstCubeTOO(ACROSSAPIBase):
         # Check if this BurstCubeTOO exists. As the id is just a hash of the
         # trigger_time, exposure and offset, then repeated requests for values
         # that match this will be caught.
-        async with await dynamodb_resource() as dynamodb:
+        async with dynamodb_resource() as dynamodb:
             table = await dynamodb.Table(
                 table_prefix + BurstCubeTOOSchema.__tablename__
             )
@@ -410,7 +410,7 @@ class BurstCubeTOORequests(ACROSSAPIBase):
         # Validate query
         if not self.validate_get():
             return False
-        async with await dynamodb_resource() as dynamodb:
+        async with dynamodb_resource() as dynamodb:
             table = await dynamodb.Table(
                 table_prefix + BurstCubeTOOSchema.__tablename__
             )
