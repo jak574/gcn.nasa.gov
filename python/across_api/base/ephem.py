@@ -105,12 +105,6 @@ class EphemBase:
                 status_code=404, detail="No TLE available for this epoch"
             )
 
-        # Check the TLE is available
-        if self.tle is None:
-            raise HTTPException(
-                status_code=404, detail="No TLE available for this epoch"
-            )
-
         # Create array of timestamps
         if self.begin == self.end:
             self.timestamp = Time([self.begin])
