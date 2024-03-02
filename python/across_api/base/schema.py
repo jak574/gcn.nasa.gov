@@ -340,7 +340,7 @@ class TLEEntry(BaseSchema):
         -------
             A list of TLEEntry objects between the specified epochs.
         """
-        async with await dynamodb_resource() as dynamodb:
+        async with dynamodb_resource() as dynamodb:
             table = await dynamodb.Table(table_prefix + cls.__tablename__)
 
             # Query the table for TLEs between the two epochs
@@ -358,7 +358,7 @@ class TLEEntry(BaseSchema):
 
     async def write(self) -> None:
         """Write the TLE entry to the database."""
-        async with await dynamodb_resource() as dynamodb:
+        async with dynamodb_resource() as dynamodb:
             table = await dynamodb.Table(table_prefix + self.__tablename__)
             await table.put_item(Item=self.model_dump(mode="json"))
 
