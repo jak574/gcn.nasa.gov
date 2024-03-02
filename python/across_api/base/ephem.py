@@ -98,7 +98,7 @@ class EphemBase:
         self.end = round_time(end, stepsize)
         self.stepsize = stepsize
 
-    async def get(self):
+    def compute_ephem(self) -> bool:
         # Check if TLE is loaded
         if self.tle is None:
             raise HTTPException(
@@ -158,3 +158,5 @@ class EphemBase:
             self.earthsize = self.earth_radius * np.ones(len(self))
         else:
             self.earthsize = np.arcsin(R_earth / dist)
+
+        return True

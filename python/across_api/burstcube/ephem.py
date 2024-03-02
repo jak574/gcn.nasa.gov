@@ -20,9 +20,12 @@ class BurstCubeEphem(EphemBase, ACROSSAPIBase):
     # Configuration options
     earth_radius = 70 * u.deg  # Fix 70 degree Earth radius
 
-    async def get(self):
+    async def get(self) -> bool:
+        # Get TLE
         tle = BurstCubeTLE(self.begin)
         await tle.get()
         self.tle = tle.tle
 
-        return await super().get()
+        # Compute ephemeris
+        self.compute_ephem()
+        return True
