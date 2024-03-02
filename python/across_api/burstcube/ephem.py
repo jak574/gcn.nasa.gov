@@ -2,12 +2,9 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
-from typing import Optional
-import astropy.units as u  # type: ignore
-from astropy.time import Time  # type: ignore
-from cachetools import TTLCache, cached
 
-from ..base.schema import TLEEntry
+import astropy.units as u  # type: ignore
+from cachetools import TTLCache, cached
 from ..base.common import ACROSSAPIBase
 from ..base.ephem import EphemBase
 from ..burstcube.tle import BurstCubeTLE
