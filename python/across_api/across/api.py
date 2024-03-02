@@ -63,8 +63,10 @@ async def secure_hello(name: YourNameDep) -> HelloSchema:
 
 
 @app.get("/across/resolve")
-def resolve(name: SourceNameDep) -> ResolveSchema:
+async def resolve(name: SourceNameDep) -> ResolveSchema:
     """
     Resolve the name of an astronomical object to its coordinates.
     """
-    return Resolve(name=name).schema
+    resolve = Resolve(name=name)
+    await resolve.get()
+    return resolve.schema

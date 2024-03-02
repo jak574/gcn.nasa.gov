@@ -1,14 +1,20 @@
-from typing import Any
-import arc  # type: ignore[import]
-import boto3  # type: ignore[import]
+import aioboto3  # type: ignore[import]
 import os
 
+"""If running in Architect, return tables.table, else return boto3 dynamodb
+table. This enables the use of moto to mock the dynamodb table in tests."""
 
-def dynamodb_table(tablename) -> Any:
-    """If running in Architect, return tables.table, else return boto3 dynamodb
-    table. This enables the use of moto to mock the dynamodb table in tests."""
-    if os.environ.get("ARC_ENV") is not None:
-        return arc.tables.table(tablename)
+
+async def dynamodb_resource():
+    dynamodb_session = aioboto3.Session()
+    if os.environ.get("ARC_ENV") == "testing" or os.environ.get("ARC_ENV") is None:
+        return dynamodb_session.resource(
+            "dynamodb", region_name="us-east-1", endpoint_url="http://localhost:5555"
+        )
     else:
-        session = boto3.Session()
-        return session.resource("dynamodb", region_name="us-east-1").Table(tablename)
+        return dynamodb_session.resource("dynamodb", region_name="us-east-1")
+
+if os.environ.get("ARC_ENV") == "testing" or os.environ.get("ARC_ENV") is None:
+    table_prefix = "remix-gcn-staging-"
+else:
+    table_prefix = ""

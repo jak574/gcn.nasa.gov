@@ -19,7 +19,7 @@ from pydantic import (
     model_validator,
 )
 
-from .database import dynamodb_table
+from .database import dynamodb_resource, table_prefix
 
 # Define a Pydantic type for astropy Time objects, which will be serialized as
 # a naive UTC datetime object, or a string in ISO format for JSON.
@@ -320,7 +320,7 @@ class TLEEntry(BaseSchema):
         return Time(f"{year}-01-01", scale="utc") + (day_of_year - 1) * u.day
 
     @classmethod
-    def find_tles_between_epochs(
+    async def find_tles_between_epochs(
         cls, satname: str, start_epoch: Time, end_epoch: Time
     ) -> List[Any]:
         """
@@ -340,25 +340,27 @@ class TLEEntry(BaseSchema):
         -------
             A list of TLEEntry objects between the specified epochs.
         """
-        table = dynamodb_table(cls.__tablename__)
+        async with await dynamodb_resource() as dynamodb:
+            table = await dynamodb.Table(table_prefix+cls.__tablename__)
 
-        # Query the table for TLEs between the two epochs
-        response = table.query(
-            KeyConditionExpression="satname = :satname AND epoch BETWEEN :start_epoch AND :end_epoch",
-            ExpressionAttributeValues={
-                ":satname": satname,
-                ":start_epoch": str(start_epoch.utc.datetime),
-                ":end_epoch": str(end_epoch.utc.datetime),
-            },
-        )
+            # Query the table for TLEs between the two epochs
+            response = await table.query(
+                KeyConditionExpression="satname = :satname AND epoch BETWEEN :start_epoch AND :end_epoch",
+                ExpressionAttributeValues={
+                    ":satname": satname,
+                    ":start_epoch": str(start_epoch.utc.datetime),
+                    ":end_epoch": str(end_epoch.utc.datetime),
+                },
+            )
 
-        # Convert the response into a list of TLEEntry objects and return them
-        return [cls(**item) for item in response["Items"]]
+            # Convert the response into a list of TLEEntry objects and return them
+            return [cls(**item) for item in response["Items"]]
 
-    def write(self) -> None:
+    async def write(self) -> None:
         """Write the TLE entry to the database."""
-        table = dynamodb_table(self.__tablename__)
-        table.put_item(Item=self.model_dump(mode="json"))
+        async with await dynamodb_resource() as dynamodb:
+            table = await dynamodb.Table(table_prefix+self.__tablename__)
+            await table.put_item(Item=self.model_dump(mode="json"))
 
 
 class TLESchema(BaseSchema):

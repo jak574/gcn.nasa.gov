@@ -23,7 +23,9 @@ from astropy.time import Time  # type: ignore[import]
 from boto3.dynamodb.conditions import Key  # type: ignore[import]
 from fastapi import HTTPException
 
-from ..base.common import ACROSSAPIBase
+from ..base.database import dynamodb_resource, table_prefix
+
+from ..base.common import ACROSSAPIBase, round_time
 from .constraints import burstcube_saa_constraint
 from .ephem import BurstCubeEphem
 from .fov import BurstCubeFOV
@@ -116,17 +118,6 @@ class BurstCubeTOO(ACROSSAPIBase):
     too_info: str = ""
     min_prob: float = 0.10  # 10% of probability in FOV
 
-    @property
-    def table(self):
-        """Return the table for the BurstCubeTOO."""
-        if not hasattr(self, "_table"):
-            self._table = tables.table(BurstCubeTOOSchema.__tablename__)
-        return self._table
-
-    @table.setter
-    def table(self, value):
-        self._table = value
-
     @cached_property
     def skycoord(self) -> Optional[SkyCoord]:
         """Return the skycoord of the BurstCubeTOO."""
@@ -134,7 +125,7 @@ class BurstCubeTOO(ACROSSAPIBase):
             return SkyCoord(self.ra, self.dec)
         return None
 
-    def get(self) -> bool:
+    async def get(self) -> bool:
         """
         Fetch a BurstCubeTOO for a given id.
 
@@ -144,7 +135,12 @@ class BurstCubeTOO(ACROSSAPIBase):
         """
 
         # Fetch BurstCubeTOO from database
-        response = self.table.get_item(Key={"id": self.id})
+        try:
+            async with dynamodb_resource() as dynamodb:
+                table = dynamodb.Table(table_prefix + BurstCubeTOOSchema.__tablename__)
+                response = await table.get_item(Key={"id": self.id})
+        except botocore.exceptions.ClientError as e:
+            raise HTTPException(500, f"Error fetching BurstCubeTOO: {e}")
         if "Item" not in response:
             raise HTTPException(404, "BurstCubeTOO not found.")
 
@@ -156,7 +152,7 @@ class BurstCubeTOO(ACROSSAPIBase):
             setattr(self, k, v)
         return True
 
-    def delete(self) -> bool:
+    async def delete(self) -> bool:
         """
         Delete a given too, specified by id. created_by of BurstCubeTOO has to match yours.
 
@@ -179,11 +175,15 @@ class BurstCubeTOO(ACROSSAPIBase):
                 )
                 # Add fixed partition key for the GSI
                 json_too["gsipk"] = 1
-                self.table.put_item(Item=json_too)
+                async with dynamodb_resource() as dynamodb:
+                    table = dynamodb.Table(
+                        table_prefix + BurstCubeTOOSchema.__tablename__
+                    )
+                    await table.put_item(Item=json_too)
             return True
         return False
 
-    def put(self) -> bool:
+    async def put(self) -> bool:
         """
         Alter existing BurstCube BurstCubeTOO using ACROSS API using POST
 
@@ -196,38 +196,40 @@ class BurstCubeTOO(ACROSSAPIBase):
             return False
 
         # Check if this BurstCubeTOO exists
-        response = self.table.get_item(Key={"id": self.id})
+        async with dynamodb_resource() as dynamodb:
+            table = dynamodb.Table(table_prefix + BurstCubeTOOSchema.__tablename__)
+            response = await table.get_item(Key={"id": self.id})
 
-        # Check if the TOO exists
-        if "Item" not in response:
-            raise HTTPException(404, "BurstCubeTOO not found.")
+            # Check if the TOO exists
+            if "Item" not in response:
+                raise HTTPException(404, "BurstCubeTOO not found.")
 
-        # Reconstruct the TOO as it exists in the database
-        print(response["Item"])
-        old_too = BurstCubeTOO(**response["Item"])
+            # Reconstruct the TOO as it exists in the database
+            print(response["Item"])
+            old_too = BurstCubeTOO(**response["Item"])
 
-        # FIXME: Some validation as to whether the user is allowed to update
-        # this entry
+            # FIXME: Some validation as to whether the user is allowed to update
+            # this entry
 
-        # Check if the coordinates are being changed, if yes, run the
-        # check_constraints again. If a healpix file is being uploaded, run
-        # the check_constraints again, as we don't record the healpix_loc for comparison.
-        if (
-            self.ra != old_too.ra
-            or self.dec != old_too.dec
-            or self.error_radius != old_too.error_radius
-            or self.healpix_loc is not None
-        ):
-            # Check for various TOO constraints
-            if not self.check_constraints():
-                self.status = TOOStatus.rejected
+            # Check if the coordinates are being changed, if yes, run the
+            # check_constraints again. If a healpix file is being uploaded, run
+            # the check_constraints again, as we don't record the healpix_loc for comparison.
+            if (
+                self.ra != old_too.ra
+                or self.dec != old_too.dec
+                or self.error_radius != old_too.error_radius
+                or self.healpix_loc is not None
+            ):
+                # Check for various TOO constraints
+                if not self.check_constraints():
+                    self.status = TOOStatus.rejected
 
-        # Write BurstCubeTOO to the database
-        self.modified_by = self.sub
-        self.modified_on = Time.now().datetime.isoformat()
-        json_too = json.loads(self.schema.model_dump_json(), parse_float=Decimal)
-        json_too["gsipk"] = 1
-        self.table.put_item(Item=json_too)
+            # Write BurstCubeTOO to the database
+            self.modified_by = self.username
+            self.modified_on = Time.now().datetime.isoformat()
+            json_too = json.loads(self.schema.model_dump_json(), parse_float=Decimal)
+            json_too["gsipk"] = 1
+            await table.put_item(Item=json_too)
 
         return True
 
@@ -295,7 +297,7 @@ class BurstCubeTOO(ACROSSAPIBase):
         self.too_info = self.too_info.strip()
         return True
 
-    def post(self) -> bool:
+    async def post(self) -> bool:
         """
         Upload BurstCubeTOO to ACROSS API using POST
 
@@ -323,18 +325,23 @@ class BurstCubeTOO(ACROSSAPIBase):
         # Check if this BurstCubeTOO exists. As the id is just a hash of the
         # trigger_time, exposure and offset, then repeated requests for values
         # that match this will be caught.
-        response = self.table.get_item(Key={"id": self.id})
-        if response.get("Item"):
-            raise HTTPException(409, "BurstCubeTOO already exists.")
+        async with dynamodb_resource() as dynamodb:
+            table = dynamodb.Table(table_prefix + BurstCubeTOOSchema.__tablename__)
+            try:
+                response = await table.get_item(Key={"id": self.id})
+                if response.get("Item"):
+                    raise HTTPException(409, "BurstCubeTOO already exists.")
+            except botocore.exceptions.ClientError:
+                pass
 
-        # Check for various TOO constraints
-        if not self.check_constraints():
-            self.status = TOOStatus.rejected
+            # Check for various TOO constraints
+            if not self.check_constraints():
+                self.status = TOOStatus.rejected
 
-        # Write BurstCubeTOO to the database
-        json_too = json.loads(self.schema.model_dump_json(), parse_float=Decimal)
-        json_too["gsipk"] = 1
-        self.table.put_item(Item=json_too)
+            # Write BurstCubeTOO to the database
+            json_too = json.loads(self.schema.model_dump_json(), parse_float=Decimal)
+            json_too["gsipk"] = 1
+            await table.put_item(Item=json_too)
 
         return True
 
@@ -390,26 +397,23 @@ class BurstCubeTOORequests(ACROSSAPIBase):
         # Attributes
         self.entries: list = []
 
-        # Parse Arguments
-        if self.validate_get():
-            self.get()
-
-    def get(self) -> bool:
+    async def get(self) -> bool:
         """
         Get a list of BurstCubeTOO requests
         """
         # Validate query
         if not self.validate_get():
             return False
-        table = tables.table(BurstCubeTOOSchema.__tablename__)
+        async with dynamodb_resource() as dynamodb:
+            table = dynamodb.Table(table_prefix + BurstCubeTOOSchema.__tablename__)
 
-        if self.duration is not None:
-            self.end = Time.now()
-            self.begin = self.end - self.duration
+            if self.duration is not None:
+                self.end = Time.now()
+                self.begin = self.end - self.duration
 
         # Search for entries that overlap a given date range
         if self.begin is not None and self.end is not None:
-            toos = table.query(
+            toos = await table.query(
                 IndexName="byCreatedOn",
                 KeyConditionExpression=Key("gsipk").eq("1")
                 & Key("created_on").between(self.begin.isot, self.end.isot),
@@ -417,7 +421,7 @@ class BurstCubeTOORequests(ACROSSAPIBase):
         elif self.limit is not None:
             # Fetch the most recent number of entries (specified by limit) in
             # reverse order of submission
-            toos = table.query(
+            toos = await table.query(
                 IndexName="byCreatedOn",
                 KeyConditionExpression=Key("gsipk").eq("1"),
                 Limit=self.limit,
@@ -425,7 +429,7 @@ class BurstCubeTOORequests(ACROSSAPIBase):
             )
         else:
             # Fetch everything
-            toos = table.scan()
+            toos = await table.scan()
 
         # Convert entries for return
         self.entries = [BurstCubeTOOSchema.model_validate(too) for too in toos["Items"]]
