@@ -236,7 +236,7 @@ class BurstCubeTOO(ACROSSAPIBase):
 
         return True
 
-    def check_constraints(self):
+    async def check_constraints(self):
         """
         Check if BurstCubeTOO parameters are valid.
 
@@ -266,6 +266,7 @@ class BurstCubeTOO(ACROSSAPIBase):
             end=self.trigger_time + self.offset + self.exposure,
             stepsize=1 * u.s,
         )
+        await ephem.get()
 
         # Check if the trigger time is in the SAA
         saa = burstcube_saa_constraint(time=self.trigger_time, ephem=ephem)

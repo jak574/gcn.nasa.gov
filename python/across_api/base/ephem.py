@@ -93,16 +93,17 @@ class EphemBase:
         return index
 
     def __init__(self, begin: Time, end: Time, stepsize: u.Quantity = 60 * u.s):
+        # Parse inputs, round begin and end to stepsize
+        self.begin = round_time(begin, stepsize)
+        self.end = round_time(end, stepsize)
+        self.stepsize = stepsize
+
+    async def get(self):
         # Check if TLE is loaded
         if self.tle is None:
             raise HTTPException(
                 status_code=404, detail="No TLE available for this epoch"
             )
-
-        # Parse inputs, round begin and end to stepsize
-        self.begin = round_time(begin, stepsize)
-        self.end = round_time(end, stepsize)
-        self.stepsize = stepsize
 
         # Check the TLE is available
         if self.tle is None:

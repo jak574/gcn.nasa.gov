@@ -14,6 +14,7 @@ async def dynamodb_resource():
     else:
         return dynamodb_session.resource("dynamodb", region_name="us-east-1")
 
+
 if os.environ.get("ARC_ENV") == "testing" or os.environ.get("ARC_ENV") is None:
     table_prefix = "remix-gcn-staging-"
 else:

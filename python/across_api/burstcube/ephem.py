@@ -23,16 +23,9 @@ class BurstCubeEphem(EphemBase, ACROSSAPIBase):
     # Configuration options
     earth_radius = 70 * u.deg  # Fix 70 degree Earth radius
 
-    def __init__(
-        self,
-        begin: Time,
-        end: Time,
-        stepsize: u.Quantity = 60 * u.s,
-        tle: Optional[TLEEntry] = None,
-    ):
-        # Load TLE data
-        self.tle = tle
-        if self.tle is None:
-            self.tle = BurstCubeTLE(begin).tle
-        if self.tle is not None:
-            super().__init__(begin=begin, end=end, stepsize=stepsize)
+    async def get(self):
+        tle = BurstCubeTLE(self.begin)
+        await tle.get()
+        self.tle = tle.tle
+
+        return await super().get()

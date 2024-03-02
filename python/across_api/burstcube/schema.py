@@ -102,6 +102,7 @@ class BurstCubeTriggerInfo(BaseSchema):
             return json.loads(data)
         return data
 
+
 class BurstCubeTOOSchema(OptionalPositionSchema):
     """
     Schema describing a BurstCube TOO Request.
