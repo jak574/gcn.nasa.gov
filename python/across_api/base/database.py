@@ -5,7 +5,7 @@ import os
 table. This enables the use of moto to mock the dynamodb table in tests."""
 
 
-async def dynamodb_resource():
+def dynamodb_resource():
     dynamodb_session = aioboto3.Session()
     if os.environ.get("ARC_ENV") == "testing" or os.environ.get("ARC_ENV") is None:
         return dynamodb_session.resource(
