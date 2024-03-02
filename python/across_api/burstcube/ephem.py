@@ -25,4 +25,4 @@ class BurstCubeEphem(EphemBase, ACROSSAPIBase):
         await tle.get()
         self.tle = tle.tle
 
-        return super().get()
+        return await super().get()
