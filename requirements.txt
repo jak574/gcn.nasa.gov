@@ -2,8 +2,6 @@ mypy
 ruff
 hypothesis
 pytest
-pytest-mock
-pytest-dynamodb
 types-requests
 types-cachetools
 types-python-jose
