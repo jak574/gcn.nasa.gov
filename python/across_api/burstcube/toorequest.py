@@ -7,13 +7,10 @@ import json
 from dataclasses import dataclass
 from decimal import Decimal  # type: ignore[import]
 from functools import cached_property
-import hashlib
-import json
 from typing import Optional, Union
 
 import astropy.units as u  # type: ignore[import]
 import numpy as np
-from arc import tables  # type: ignore[import]
 from astropy.coordinates import (  # type: ignore[import]
     Latitude,
     Longitude,
@@ -25,7 +22,7 @@ from fastapi import HTTPException
 
 from ..base.database import dynamodb_resource, table_prefix
 
-from ..base.common import ACROSSAPIBase, round_time
+from ..base.common import ACROSSAPIBase
 from .constraints import burstcube_saa_constraint
 from .ephem import BurstCubeEphem
 from .fov import BurstCubeFOV
@@ -41,8 +38,6 @@ from .schema import (
     TOOReason,
     TOOStatus,
 )
-
-from boto3.dynamodb.conditions import Key  # type: ignore
 
 
 @dataclass
@@ -135,14 +130,12 @@ class BurstCubeTOO(ACROSSAPIBase):
         """
 
         # Fetch BurstCubeTOO from database
-        try:
-            async with dynamodb_resource() as dynamodb:
-                table = await dynamodb.Table(
-                    table_prefix + BurstCubeTOOSchema.__tablename__
-                )
-                response = await table.get_item(Key={"id": self.id})
-        except botocore.exceptions.ClientError as e:
-            raise HTTPException(500, f"Error fetching BurstCubeTOO: {e}")
+        async with dynamodb_resource() as dynamodb:
+            table = await dynamodb.Table(
+                table_prefix + BurstCubeTOOSchema.__tablename__
+            )
+            response = await table.get_item(Key={"id": self.id})
+
         if "Item" not in response:
             raise HTTPException(404, "BurstCubeTOO not found.")
 
@@ -228,7 +221,7 @@ class BurstCubeTOO(ACROSSAPIBase):
                     self.status = TOOStatus.rejected
 
             # Write BurstCubeTOO to the database
-            self.modified_by = self.username
+            self.modified_by = self.sub
             self.modified_on = Time.now().datetime.isoformat()
             json_too = json.loads(self.schema.model_dump_json(), parse_float=Decimal)
             json_too["gsipk"] = 1
@@ -333,12 +326,9 @@ class BurstCubeTOO(ACROSSAPIBase):
             table = await dynamodb.Table(
                 table_prefix + BurstCubeTOOSchema.__tablename__
             )
-            try:
-                response = await table.get_item(Key={"id": self.id})
-                if response.get("Item"):
-                    raise HTTPException(409, "BurstCubeTOO already exists.")
-            except botocore.exceptions.ClientError:
-                pass
+            response = await table.get_item(Key={"id": self.id})
+            if response.get("Item"):
+                raise HTTPException(409, "BurstCubeTOO already exists.")
 
             # Check for various TOO constraints
             if not self.check_constraints():

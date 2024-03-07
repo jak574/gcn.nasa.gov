@@ -183,6 +183,6 @@ async def burstcube_delete_too(
     """
     Delete a BurstCube Target of Opportunity (TOO) with the given ID.
     """
-    too = BurstCubeTOO(username=credential["sub"], id=id)
+    too = BurstCubeTOO(sub=credential["sub"], id=id)
     await too.delete()
     return too.schema
