@@ -9,8 +9,6 @@ modules.
 
 from fastapi import FastAPI
 
-
-
 # FastAPI app definition
 app = FastAPI(
     title="ACROSS API",

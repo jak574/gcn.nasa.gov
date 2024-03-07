@@ -5,8 +5,9 @@
 
 from datetime import datetime
 from typing import Annotated, Any, List, Optional, Union
-from astropy.coordinates import Latitude, Longitude  # type: ignore[import]
+
 import astropy.units as u  # type: ignore
+from astropy.coordinates import Latitude, Longitude  # type: ignore[import]
 from astropy.time import Time  # type: ignore
 from pydantic import (
     BaseModel,

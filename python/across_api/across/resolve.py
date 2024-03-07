@@ -4,8 +4,8 @@
 
 import json
 from typing import Optional, Tuple
-import httpx
 
+import httpx
 from astropy.coordinates.name_resolve import NameResolveError  # type: ignore
 from astropy.coordinates.sky_coordinate import SkyCoord  # type: ignore
 

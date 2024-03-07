@@ -8,9 +8,9 @@ from typing import Optional
 import astropy.units as u  # type: ignore
 import numpy as np
 from astropy.constants import R_earth  # type: ignore
-from astropy.coordinates import (  # type: ignore
+from astropy.coordinates import (
     GCRS,
-    TEME,
+    TEME,  # type: ignore
     CartesianDifferential,
     CartesianRepresentation,
     SkyCoord,

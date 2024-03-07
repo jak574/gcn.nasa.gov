@@ -3,8 +3,8 @@
 # All Rights Reserved.
 
 
-from enum import Enum
 import json
+from enum import Enum
 from typing import List, Optional
 
 import astropy.units as u  # type: ignore

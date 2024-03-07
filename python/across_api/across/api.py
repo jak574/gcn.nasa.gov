@@ -6,8 +6,8 @@ from typing import Annotated, Optional
 
 from fastapi import Depends, Query, Security
 
-from ..base.api import app
 from ..auth.api import scope_authorize
+from ..base.api import app
 from .hello import Hello
 from .resolve import Resolve
 from .schema import HelloSchema, ResolveSchema

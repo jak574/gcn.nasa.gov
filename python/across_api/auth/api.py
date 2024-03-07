@@ -6,15 +6,14 @@
 import os
 from typing import Annotated, Any
 
-from jose import jwt
-from jose.exceptions import JWTError
 import httpx  # type: ignore
 from fastapi import Depends, HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, SecurityScopes
+from jose import jwt
+from jose.exceptions import JWTError
 
 from ..base.api import app
 from .schema import VerifyAuth
-
 
 bearer = HTTPBearer(
     scheme_name="ACROSS API Authorization",

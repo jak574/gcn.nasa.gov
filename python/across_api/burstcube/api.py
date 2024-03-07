@@ -9,6 +9,7 @@ from astropy.io import fits  # type: ignore
 from fastapi import Depends, File, HTTPException, Security, UploadFile, status
 
 from ..auth.api import claims, scope_authorize
+from ..base.api import app
 from ..base.depends import (
     ErrorRadiusDep,
     ExposureDep,
@@ -20,7 +21,6 @@ from ..base.depends import (
     OptionalRaDecDep,
     TriggerTimeDep,
 )
-from ..base.api import app
 from .schema import BurstCubeTOORequestsSchema, BurstCubeTOOSchema, BurstCubeTriggerInfo
 from .toorequest import BurstCubeTOO, BurstCubeTOORequests
 

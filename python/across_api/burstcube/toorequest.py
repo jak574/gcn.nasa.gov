@@ -20,9 +20,8 @@ from astropy.time import Time  # type: ignore[import]
 from boto3.dynamodb.conditions import Key  # type: ignore[import]
 from fastapi import HTTPException
 
-from ..base.database import dynamodb_resource, table_prefix
-
 from ..base.common import ACROSSAPIBase
+from ..base.database import dynamodb_resource, table_prefix
 from .constraints import burstcube_saa_constraint
 from .ephem import BurstCubeEphem
 from .fov import BurstCubeFOV

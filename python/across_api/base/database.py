@@ -1,5 +1,6 @@
-import aioboto3  # type: ignore[import]
 import os
+
+import aioboto3  # type: ignore[import]
 
 """If running in Architect, return tables.table, else return boto3 dynamodb
 table. This enables the use of moto to mock the dynamodb table in tests."""
