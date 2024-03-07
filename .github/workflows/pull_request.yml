@@ -32,15 +32,8 @@ jobs:
       - name: Pip Install
         run: pip install -r requirements.txt
 
-      - name: Install DynamoDB
-        id: install-dynamodb
-        uses: ./.github/actions/install-dynamodb
-
-      - name: Install Package
-        run: pip install pytest-cov -e .[test]
-
-      - name: Run Tests
-        run: pytest --dynamodb-dir=${{ steps.install-dynamodb.outputs.dynamodb-dir }} --cov --cov-report=xml
+      - name: Pytest
+        run: pytest python
 
       - name: MyPy
         run: mypy python
