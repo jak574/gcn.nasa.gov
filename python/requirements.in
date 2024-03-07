@@ -9,7 +9,7 @@ healpy==0.1.dev1+g500357b
 httpx
 mangum
 python-jose
-python-multipart
+python-multipart  # Required for file uploads in FastAPI; see https://fastapi.tiangolo.com/tutorial/request-files/
 shapely
 sgp4
 spacetrack
